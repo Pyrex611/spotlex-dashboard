@@ -6,8 +6,8 @@ import { ImageIcon, Save } from 'lucide-react';
 
 export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
   const [eq, setEq] = useState(initialEq);
-  const[editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const[saving, setSaving] = useState(false);
 
   const isMain = eq.type === 'MAIN' || eq.code;
 
@@ -41,7 +41,7 @@ export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
         <div className="w-32 h-32 md:w-40 md:h-40 rounded-[1.5rem] md:rounded-3xl bg-green-50 border-4 border-green-100 overflow-hidden mb-6 flex justify-center items-center shadow-inner relative group">
           {eq.picture ? <img src={eq.picture} className="w-full h-full object-cover" /> : <ImageIcon size={48} className="text-green-200" />}
           {editMode && (
-             <label className="absolute inset-0 bg-green-900/60 flex items-center justify-center cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+             <label className="absolute inset-0 bg-green-900/60 flex items-center justify-center cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm active:opacity-80">
                <span className="text-white font-bold text-xs md:text-sm bg-green-800 px-3 md:px-4 py-2 rounded-full border border-green-500 shadow-lg text-center leading-tight">Change<br className="md:hidden"/> Photo</span>
                <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
              </label>
@@ -83,15 +83,15 @@ export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
           )}
           
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-4 md:pt-6">
-            <button type="button" onClick={() => setEditMode(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl md:rounded-2xl font-bold hover:bg-gray-200 transition-colors">Cancel</button>
-            <button type="submit" disabled={saving} className="flex-1 bg-green-700 text-white py-4 rounded-xl md:rounded-2xl font-bold hover:bg-green-800 transition-colors shadow-lg flex justify-center items-center gap-2 active:scale-95">
+            <button type="button" onClick={() => setEditMode(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl md:rounded-2xl font-bold hover:bg-gray-200 transition-colors active:opacity-80">Cancel</button>
+            <button type="submit" disabled={saving} className="flex-1 bg-green-700 text-white py-4 rounded-xl md:rounded-2xl font-bold hover:bg-green-800 transition-colors shadow-lg flex justify-center items-center gap-2 active:opacity-80">
               <Save size={20} /> {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
       ) : (
         <div className="border-t-2 border-green-50 pt-6 md:pt-8 mt-6 md:mt-6 flex justify-center">
-          <button type="button" onClick={() => setEditMode(true)} className="w-full md:w-auto px-10 bg-green-100 text-green-900 py-4 md:py-5 rounded-xl md:rounded-2xl font-black text-base md:text-lg hover:bg-green-200 hover:shadow-md transition-all active:scale-95">
+          <button type="button" onClick={() => setEditMode(true)} className="w-full md:w-auto px-10 bg-green-100 text-green-900 py-4 md:py-5 rounded-xl md:rounded-2xl font-black text-base md:text-lg hover:bg-green-200 hover:shadow-md transition-all active:opacity-80">
             Edit Equipment Info
           </button>
         </div>

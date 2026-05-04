@@ -77,7 +77,7 @@ export default function NewEquipment() {
               <div className="w-24 h-24 rounded-2xl bg-gray-50 shadow-inner flex items-center justify-center border border-gray-200"><ImageIcon className="text-gray-300" size={32}/></div>
             )}
             <div className="flex-1 text-center sm:text-left">
-              <label className="bg-green-50 border-2 border-green-200 text-green-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-green-100 transition-colors inline-block shadow-sm touch-manipulation">
+              <label className="bg-green-50 border-2 border-green-200 text-green-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-green-100 transition-colors inline-block shadow-sm active:opacity-80">
                 Choose Image
                 <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
               </label>
@@ -86,7 +86,7 @@ export default function NewEquipment() {
           </div>
         </div>
 
-        <button type="submit" disabled={isSubmitting} className="w-full bg-green-800 text-white py-4 md:py-5 rounded-2xl font-black text-lg md:text-xl hover:bg-green-900 shadow-xl transition-all disabled:opacity-50 mt-6 active:scale-[0.98] touch-manipulation">
+        <button type="submit" disabled={isSubmitting} className="w-full bg-green-800 text-white py-4 md:py-5 rounded-2xl font-black text-lg md:text-xl hover:bg-green-900 shadow-xl transition-all disabled:opacity-50 mt-6 active:opacity-80">
           {isSubmitting ? 'Saving...' : 'Save Record'}
         </button>
       </form>

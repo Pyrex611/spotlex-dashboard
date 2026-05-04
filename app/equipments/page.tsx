@@ -7,8 +7,8 @@ import { bulkUploadCSV } from '@/lib/actions';
 
 export default function EquipmentsPage() {
   const [equipments, setEquipments] = useState<any[]>([]);
-  const[loading, setLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const[isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetch('/api/equipments')
@@ -64,7 +64,7 @@ export default function EquipmentsPage() {
 
       <ul className="space-y-4 md:space-y-5">
         <li className="flex flex-col sm:flex-row items-stretch gap-3 md:gap-4 h-auto md:h-32">
-          <Link href="/equipments/new" className="flex-1 flex flex-row items-center bg-white border-2 border-dashed border-green-400 rounded-2xl md:rounded-3xl hover:bg-green-50 hover:border-green-500 transition-all p-4 cursor-pointer shadow-sm group active:scale-[0.98] touch-manipulation">
+          <Link href="/equipments/new" className="flex-1 flex flex-row items-center bg-white border-2 border-dashed border-green-400 rounded-2xl md:rounded-3xl hover:bg-green-50 hover:border-green-500 transition-all p-4 cursor-pointer shadow-sm group active:opacity-80">
             <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-green-100 flex-shrink-0 flex items-center justify-center mr-4 md:mr-6 group-hover:bg-green-200 transition-colors shadow-inner">
               <Plus size={32} className="text-green-700 md:hidden" />
               <Plus size={40} className="text-green-700 hidden md:block" />
@@ -72,7 +72,7 @@ export default function EquipmentsPage() {
             <span className="text-lg md:text-2xl font-bold text-green-800 tracking-wide">Add a new equipment</span>
           </Link>
           
-          <label className={`w-full sm:w-36 h-20 sm:h-full ${isUploading ? 'bg-green-900' : 'bg-green-800 hover:bg-green-700 hover:-translate-y-1 hover:shadow-xl'} text-white rounded-2xl md:rounded-3xl flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 cursor-pointer shadow-lg transition-all active:scale-[0.98] touch-manipulation`}>
+          <label className={`w-full sm:w-36 h-20 sm:h-full ${isUploading ? 'bg-green-900' : 'bg-green-800 hover:bg-green-700 hover:-translate-y-1 hover:shadow-xl'} text-white rounded-2xl md:rounded-3xl flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 cursor-pointer shadow-lg transition-all active:opacity-80`}>
             {isUploading ? (
               <span className="font-bold text-sm animate-pulse">Parsing...</span>
             ) : (
@@ -86,14 +86,12 @@ export default function EquipmentsPage() {
           </label>
         </li>
 
-        {/* Loading State */}
         {loading && (
           <li className="h-32 flex items-center justify-center bg-white/50 rounded-3xl border-2 border-green-100 border-dashed text-green-600 font-bold text-lg animate-pulse">
             Loading Registry Manifest...
           </li>
         )}
 
-        {/* Empty State Handler */}
         {!loading && equipments.length === 0 && (
           <li className="py-16 text-center bg-white/40 rounded-[2.5rem] border-2 border-green-200 border-dashed shadow-sm">
             <SearchX size={48} className="mx-auto text-green-300 mb-4" />
@@ -102,10 +100,9 @@ export default function EquipmentsPage() {
           </li>
         )}
 
-        {/* Populated List */}
         {!loading && equipments.map(eq => (
           <li key={eq.id}>
-            <Link href={`/equipments/${eq.id}`} className="flex items-center min-h-[7rem] md:h-32 bg-white border border-green-100 shadow-sm hover:shadow-lg rounded-2xl md:rounded-3xl p-3 md:p-4 transition-all hover:-translate-y-1 group active:scale-[0.99] touch-manipulation">
+            <Link href={`/equipments/${eq.id}`} className="flex items-center min-h-[7rem] md:h-32 bg-white border border-green-100 shadow-sm hover:shadow-lg rounded-2xl md:rounded-3xl p-3 md:p-4 transition-all hover:-translate-y-1 group active:opacity-90">
               <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-green-50 border border-green-100 flex-shrink-0 mr-4 md:mr-6 overflow-hidden flex items-center justify-center relative shadow-inner">
                 {eq.picture ? (
                    <img src={eq.picture} alt={eq.name || eq.componentCode} className="w-full h-full object-cover" />
