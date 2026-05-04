@@ -7,8 +7,8 @@ import { bulkUploadCSV } from '@/lib/actions';
 
 export default function EquipmentsPage() {
   const [equipments, setEquipments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const[isUploading, setIsUploading] = useState(false);
+  const[loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetch('/api/equipments')
@@ -56,73 +56,73 @@ export default function EquipmentsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto animate-in">
-      <div className="mb-6 md:mb-8 text-center md:text-left">
-        <h1 className="text-2xl md:text-3xl font-bold text-green-900">Equipment Registry</h1>
-        <p className="text-sm md:text-base text-green-700 mt-2">Manage tools, machinery, and components.</p>
+    <div className="max-w-4xl mx-auto animate-in">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Equipment Registry</h1>
+        <p className="text-sm text-slate-500 mt-1">Manage tools, machinery, and subcomponents.</p>
       </div>
 
-      <ul className="space-y-4 md:space-y-5">
-        <li className="flex flex-col sm:flex-row items-stretch gap-3 md:gap-4 h-auto md:h-32">
-          <Link href="/equipments/new" className="flex-1 flex flex-row items-center bg-white border-2 border-dashed border-green-400 rounded-2xl md:rounded-3xl hover:bg-green-50 hover:border-green-500 transition-all p-4 cursor-pointer shadow-sm group active:opacity-80">
-            <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-green-100 flex-shrink-0 flex items-center justify-center mr-4 md:mr-6 group-hover:bg-green-200 transition-colors shadow-inner">
-              <Plus size={32} className="text-green-700 md:hidden" />
-              <Plus size={40} className="text-green-700 hidden md:block" />
+      <ul className="space-y-4">
+        {/* Action Row */}
+        <li className="flex flex-col sm:flex-row gap-3 h-auto sm:h-24">
+          <Link href="/equipments/new" className="flex-1 flex items-center bg-white border border-dashed border-slate-300 rounded-2xl hover:bg-emerald-50 hover:border-emerald-300 transition-all p-3 cursor-pointer group shadow-sm">
+            <div className="w-14 h-14 rounded-xl bg-slate-50 flex-shrink-0 flex items-center justify-center mr-4 group-hover:bg-white border border-slate-100 transition-colors">
+              <Plus size={24} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
             </div>
-            <span className="text-lg md:text-2xl font-bold text-green-800 tracking-wide">Add a new equipment</span>
+            <span className="text-sm font-semibold text-slate-600 group-hover:text-emerald-700 transition-colors">Register New Item</span>
           </Link>
           
-          <label className={`w-full sm:w-36 h-20 sm:h-full ${isUploading ? 'bg-green-900' : 'bg-green-800 hover:bg-green-700 hover:-translate-y-1 hover:shadow-xl'} text-white rounded-2xl md:rounded-3xl flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 cursor-pointer shadow-lg transition-all active:opacity-80`}>
+          <label className={`w-full sm:w-40 h-16 sm:h-full ${isUploading ? 'bg-slate-800' : 'bg-slate-800 hover:bg-slate-700'} text-white rounded-2xl flex flex-row sm:flex-col items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors`}>
             {isUploading ? (
-              <span className="font-bold text-sm animate-pulse">Parsing...</span>
+              <span className="font-medium text-xs animate-pulse">Parsing...</span>
             ) : (
               <>
-                <Upload size={28} className="sm:mb-2 text-green-100 hidden sm:block" />
-                <Upload size={24} className="text-green-100 sm:hidden" />
-                <span className="text-xs font-black tracking-widest uppercase text-center sm:px-2">Bulk Upload<br className="hidden sm:block"/> <span className="sm:hidden">-</span> (CSV/XLSX)</span>
+                <Upload size={20} className="sm:mb-1 text-slate-300" />
+                <span className="text-[10px] font-bold tracking-wider uppercase">Upload CSV/XLSX</span>
                 <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="hidden" onChange={handleBulkUpload} />
               </>
             )}
           </label>
         </li>
 
+        {/* States */}
         {loading && (
-          <li className="h-32 flex items-center justify-center bg-white/50 rounded-3xl border-2 border-green-100 border-dashed text-green-600 font-bold text-lg animate-pulse">
-            Loading Registry Manifest...
+          <li className="h-24 flex items-center justify-center bg-white rounded-2xl border border-slate-200 text-slate-400 font-medium text-sm animate-pulse shadow-sm">
+            Loading Manifest...
           </li>
         )}
 
         {!loading && equipments.length === 0 && (
-          <li className="py-16 text-center bg-white/40 rounded-[2.5rem] border-2 border-green-200 border-dashed shadow-sm">
-            <SearchX size={48} className="mx-auto text-green-300 mb-4" />
-            <h3 className="text-2xl font-black text-green-900 mb-2">Registry is Empty</h3>
-            <p className="text-green-600 font-medium max-w-sm mx-auto">Click the Add button above to register new equipment or bulk upload your existing CSV/XLSX manifests.</p>
+          <li className="py-12 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <SearchX size={32} className="mx-auto text-slate-300 mb-3" />
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Registry is Empty</h3>
+            <p className="text-slate-500 text-sm max-w-sm mx-auto">Register a new item or bulk upload your existing manifest.</p>
           </li>
         )}
 
+        {/* List */}
         {!loading && equipments.map(eq => (
           <li key={eq.id}>
-            <Link href={`/equipments/${eq.id}`} className="flex items-center min-h-[7rem] md:h-32 bg-white border border-green-100 shadow-sm hover:shadow-lg rounded-2xl md:rounded-3xl p-3 md:p-4 transition-all hover:-translate-y-1 group active:opacity-90">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-green-50 border border-green-100 flex-shrink-0 mr-4 md:mr-6 overflow-hidden flex items-center justify-center relative shadow-inner">
+            <Link href={`/equipments/${eq.id}`} className="flex items-center min-h-[5.5rem] bg-white border border-slate-200 shadow-sm hover:shadow-md rounded-2xl p-3 transition-all group">
+              <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0 mr-4 overflow-hidden flex items-center justify-center relative">
                 {eq.picture ? (
                    <img src={eq.picture} alt={eq.name || eq.componentCode} className="w-full h-full object-cover" />
                 ) : (
-                   <ImageIcon size={32} className="text-green-300 md:hidden" />
+                   <ImageIcon size={24} className="text-slate-300" />
                 )}
-                {!eq.picture && <ImageIcon size={36} className="text-green-300 hidden md:block" />}
-                <div className="absolute top-1 right-1 bg-white/80 p-1 rounded-lg backdrop-blur-sm shadow-sm">
-                  {eq.type === 'COMPONENT' ? <Settings size={12} className="text-gray-500" /> : <Wrench size={12} className="text-green-600" />}
+                <div className="absolute top-1 right-1 bg-white/90 p-0.5 rounded backdrop-blur-sm border border-slate-100">
+                  {eq.type === 'COMPONENT' ? <Settings size={10} className="text-slate-400" /> : <Wrench size={10} className="text-emerald-500" />}
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-center overflow-hidden">
-                <h3 className="text-lg md:text-2xl font-black text-green-950 group-hover:text-green-700 transition-colors truncate">
+                <h3 className="text-base font-bold text-slate-800 group-hover:text-emerald-700 transition-colors truncate">
                   {eq.name || `Component`}
                 </h3>
-                <div className="mt-2 md:mt-3 flex flex-wrap items-center gap-2 md:gap-3">
-                  <span className="text-xs md:text-sm font-mono bg-green-100 text-green-900 px-2.5 md:px-3 py-1 md:py-1.5 rounded-lg border border-green-200 shadow-sm font-bold">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono bg-slate-50 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
                     {eq.code || eq.componentCode}
                   </span>
-                  <span className={`text-[9px] md:text-[10px] uppercase tracking-widest font-black px-2 md:px-2.5 py-1 rounded-md ${eq.type === 'COMPONENT' ? 'bg-gray-100 text-gray-600' : 'bg-green-600 text-white'}`}>
+                  <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${eq.type === 'COMPONENT' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-600'}`}>
                     {eq.type || (eq.componentCode ? 'COMPONENT' : 'MAIN')}
                   </span>
                 </div>

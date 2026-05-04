@@ -1,20 +1,26 @@
 "use client"
 
 import { useState } from 'react';
-import { endProject } from '@/lib/actions';
-import { CheckSquare, Square, AlertTriangle, User, Wrench, Calendar } from 'lucide-react';
+import { endProject, addStaffToProject, addEquipmentToProject, searchEquipment } from '@/lib/actions';
+import { CheckSquare, Square, AlertTriangle, User, Wrench, Calendar, Plus, X, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function ProjectClient({ project }: { project: any }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
-  const[endedBy, setEndedBy] = useState('');
+  const [endedBy, setEndedBy] = useState('');
   const [checkedEq, setCheckedEq] = useState<Record<string, boolean>>({});
   const [isEnding, setIsEnding] = useState(false);
 
+  const[addStaffOpen, setAddStaffOpen] = useState(false);
+  const [newStaffName, setNewStaffName] = useState('');
+  const[addEqOpen, setAddEqOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const[searchResults, setSearchResults] = useState<any[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
+
   const handleEndInitiate = () => {
     const initialChecks: Record<string, boolean> = {};
-    // Ensure project.equipment is a valid array before looping
     if (project?.equipment && Array.isArray(project.equipment)) {
       project.equipment.forEach((e: any) => {
         if (e?.equipment?.id) {
@@ -40,105 +46,217 @@ export default function ProjectClient({ project }: { project: any }) {
     await endProject(project.id, endedBy, returnedIds);
   };
 
+  const handleAddStaffSubmit = async (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    if (newStaffName.trim()) {
+      setIsAdding(true);
+      await addStaffToProject(project.id, newStaffName.trim());
+      setNewStaffName('');
+      setIsAdding(false);
+      setAddStaffOpen(false);
+    }
+  };
+
+  const handleSearch = async (val: string) => {
+    setSearchQuery(val);
+    if (val.length > 1) {
+      setSearchResults(await searchEquipment(val));
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const handleAddEquipmentSubmit = async (eqId: string) => {
+    setIsAdding(true);
+    await addEquipmentToProject(project.id, eqId);
+    setIsAdding(false);
+    setAddEqOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 animate-in">
-      <div className="bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-green-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 md:mb-10 gap-4">
+    <div className="max-w-4xl mx-auto animate-in space-y-6 relative z-10">
+      
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6 mb-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black text-green-950 mb-3">{project.name}</h1>
-            <div className="flex items-center gap-2 text-green-700 font-bold bg-green-50 border border-green-100 px-3 md:px-4 py-2 md:py-2.5 rounded-xl inline-flex shadow-sm text-sm md:text-base">
-              <Calendar size={18} />
-              Started {format(new Date(project.startDate), 'MMM dd, yyyy')}
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{project.name}</h1>
+            <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <Calendar size={14} />
+              Started {format(new Date(project.startDate), 'MMMM dd, yyyy')}
             </div>
           </div>
-          <span className={`w-full md:w-auto text-center px-6 py-3 md:py-2.5 rounded-xl md:rounded-2xl text-sm font-black tracking-widest uppercase shadow-sm ${project.status === 'ONGOING' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+          <span className={`px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider ${project.status === 'ONGOING' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
             {project.status}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-8 md:mt-10">
-          <div className="bg-green-50/50 p-6 md:p-8 rounded-[1.5rem] md:rounded-3xl border border-green-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-green-200 p-2.5 rounded-xl"><User size={24} className="text-green-800" /></div>
-              <h3 className="text-lg md:text-xl font-extrabold text-green-900">Assigned Employees</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-slate-800">
+                <User size={16} className="text-emerald-600" />
+                <h3 className="text-sm font-semibold">Assigned Staff</h3>
+              </div>
+              {project.status === 'ONGOING' && (
+                <button type="button" onClick={() => setAddStaffOpen(true)} className="p-1.5 bg-slate-50 text-slate-600 rounded-md border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors active:opacity-80">
+                  <Plus size={16} />
+                </button>
+              )}
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {project.employees?.map((emp: any) => (
-                <li key={emp.id} className="bg-white p-4 rounded-2xl text-green-900 font-bold border border-green-100 shadow-sm flex items-center gap-3 text-sm md:text-base">
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500 flex-shrink-0" />
+                <li key={emp.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm font-medium text-slate-700 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                   {emp.name}
                 </li>
               ))}
-              {(!project.employees || project.employees.length === 0) && <p className="text-green-600/70 italic font-medium">No employees assigned.</p>}
+              {(!project.employees || project.employees.length === 0) && <p className="text-slate-400 text-sm italic">No staff assigned.</p>}
             </ul>
           </div>
-          <div className="bg-green-50/50 p-6 md:p-8 rounded-[1.5rem] md:rounded-3xl border border-green-100">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-green-200 p-2.5 rounded-xl"><Wrench size={24} className="text-green-800" /></div>
-              <h3 className="text-lg md:text-xl font-extrabold text-green-900">Assigned Equipment</h3>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-slate-800">
+                <Wrench size={16} className="text-emerald-600" />
+                <h3 className="text-sm font-semibold">Assigned Equipment</h3>
+              </div>
+              {project.status === 'ONGOING' && (
+                <button type="button" onClick={() => setAddEqOpen(true)} className="p-1.5 bg-slate-50 text-slate-600 rounded-md border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 transition-colors active:opacity-80">
+                  <Plus size={16} />
+                </button>
+              )}
             </div>
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {project.equipment?.map((eq: any) => (
-                <li key={eq.id} className="bg-white p-4 rounded-2xl text-green-900 font-bold flex justify-between items-center border border-green-100 shadow-sm text-sm md:text-base">
-                  <span className="truncate pr-3">{eq.equipment.name}</span>
-                  <span className="font-mono text-xs md:text-sm text-green-700 bg-green-50 px-2.5 py-1 md:py-1.5 rounded-lg border border-green-200">{eq.equipment.code}</span>
+                <li key={eq.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm font-medium text-slate-700 flex justify-between items-center gap-3">
+                  <span className="truncate">{eq.equipment.name}</span>
+                  <span className="font-mono text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">{eq.equipment.code}</span>
                 </li>
               ))}
-              {(!project.equipment || project.equipment.length === 0) && <p className="text-green-600/70 italic font-medium">No equipment assigned.</p>}
+              {(!project.equipment || project.equipment.length === 0) && <p className="text-slate-400 text-sm italic">No equipment assigned.</p>}
             </ul>
           </div>
         </div>
 
         {project.status === 'ONGOING' && (
-          <div className="mt-8 md:mt-12 border-t-2 border-green-50 pt-8 md:pt-10 flex flex-col md:flex-row justify-end">
-            <button type="button" onClick={handleEndInitiate} className="w-full md:w-auto bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border-2 border-red-200 hover:border-red-600 px-10 py-4 rounded-xl md:rounded-2xl font-black text-lg transition-all shadow-sm active:opacity-80">
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col md:flex-row justify-end">
+            <button type="button" onClick={handleEndInitiate} className="w-full md:w-auto bg-white border border-red-200 text-red-600 hover:bg-red-50 px-8 py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm relative z-10 active:opacity-80">
               End Project
             </button>
           </div>
         )}
       </div>
 
+      {addStaffOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl animate-in">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Add Team Member</h3>
+              <button type="button" onClick={() => setAddStaffOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"><X size={18} className="text-slate-500" /></button>
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">Staff Name</label>
+              <input 
+                autoFocus 
+                value={newStaffName} 
+                onChange={e => setNewStaffName(e.target.value)} 
+                onKeyDown={(e) => { 
+                  if (e.key === 'Enter') { 
+                    e.preventDefault(); 
+                    handleAddStaffSubmit(e); 
+                  } 
+                }} 
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" 
+                placeholder="Enter full name..." 
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button type="button" onClick={() => setAddStaffOpen(false)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">Cancel</button>
+              <button type="button" onClick={handleAddStaffSubmit} disabled={!newStaffName || isAdding} className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-medium hover:bg-slate-700 transition-colors disabled:opacity-50 text-sm active:opacity-80">
+                {isAdding ? 'Adding...' : 'Add to Project'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addEqOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl animate-in">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Deploy New Equipment</h3>
+              <button type="button" onClick={() => setAddEqOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"><X size={18} className="text-slate-500" /></button>
+            </div>
+            <div className="relative mb-4">
+              <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+              <input value={searchQuery} onChange={e => handleSearch(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} autoFocus className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-sm" placeholder="Search by name or code..." />
+            </div>
+            <div className="max-h-[40vh] overflow-y-auto space-y-1.5 pr-1">
+              {searchResults.map(res => (
+                /* Native Button Enforced for Search Results */
+                <button type="button" key={res.id} onClick={() => handleAddEquipmentSubmit(res.id)} className="w-full p-3 bg-white border border-slate-100 rounded-xl cursor-pointer hover:border-emerald-200 hover:bg-emerald-50 transition-all flex items-center justify-between group active:opacity-80 text-left">
+                  <span className="font-medium text-slate-700 group-hover:text-emerald-800 text-sm">{res.name}</span>
+                  <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-1 rounded group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors shrink-0 ml-2">{res.code}</span>
+                </button>
+              ))}
+              {searchQuery.length > 1 && searchResults.length === 0 && (
+                <div className="text-center py-6">
+                  <Wrench size={24} className="text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">No equipment found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalOpen && (
-        <div className="fixed inset-0 bg-green-950/60 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] w-full max-w-xl shadow-2xl relative animate-in">
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 md:p-8 rounded-2xl w-full max-w-lg shadow-xl animate-in">
             {!warningOpen ? (
               <>
-                <h2 className="text-2xl md:text-3xl font-black text-green-950 mb-4 md:mb-6 border-b-2 border-green-50 pb-4 md:pb-6">End Checklist</h2>
-                <p className="text-green-700 font-bold mb-4 text-sm md:text-base">Confirm the return of equipment:</p>
-                <div className="space-y-3 max-h-[45vh] md:max-h-[40vh] overflow-y-auto mb-6 md:mb-8 pr-2 custom-scrollbar">
+                <h2 className="text-xl font-bold text-slate-900 mb-2">End Checklist</h2>
+                <p className="text-slate-500 text-sm mb-5">Confirm return of equipment before closing.</p>
+                
+                <div className="space-y-2 max-h-[40vh] overflow-y-auto mb-6 pr-1">
                   {project.equipment?.map((eq: any) => (
-                    <div key={eq.equipment.id} className={`flex items-center justify-between p-4 rounded-xl md:rounded-2xl cursor-pointer transition-all border-2 active:opacity-80 ${checkedEq[eq.equipment.id] ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-transparent hover:bg-gray-100'}`} onClick={() => setCheckedEq({ ...checkedEq,[eq.equipment.id]: !checkedEq[eq.equipment.id] })}>
-                      <div>
-                        <p className={`font-bold text-base md:text-lg ${checkedEq[eq.equipment.id] ? 'text-green-900' : 'text-gray-800'}`}>{eq.equipment.name}</p>
-                        <p className={`text-xs md:text-sm font-mono mt-1 ${checkedEq[eq.equipment.id] ? 'text-green-700' : 'text-gray-500'}`}>{eq.equipment.code}</p>
+                    /* Native Button Enforced for Checklist Array */
+                    <button type="button" key={eq.equipment.id} onClick={() => setCheckedEq({ ...checkedEq,[eq.equipment.id]: !checkedEq[eq.equipment.id] })} className={`w-full flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all border text-left active:opacity-80 ${checkedEq[eq.equipment.id] ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}>
+                      <div className="flex flex-col">
+                        <span className={`font-medium text-sm ${checkedEq[eq.equipment.id] ? 'text-emerald-900' : 'text-slate-700'}`}>{eq.equipment.name}</span>
+                        <span className={`text-[10px] font-mono mt-0.5 ${checkedEq[eq.equipment.id] ? 'text-emerald-600' : 'text-slate-400'}`}>{eq.equipment.code}</span>
                       </div>
-                      {checkedEq[eq.equipment.id] ? <CheckSquare className="text-green-600 flex-shrink-0" size={28} /> : <Square className="text-gray-300 flex-shrink-0" size={28} />}
-                    </div>
+                      {checkedEq[eq.equipment.id] ? <CheckSquare className="text-emerald-600 shrink-0" size={20} /> : <Square className="text-slate-300 shrink-0" size={20} />}
+                    </button>
                   ))}
-                  {(!project.equipment || project.equipment.length === 0) && <p className="text-center text-gray-500 py-4 font-medium">No equipment to return.</p>}
+                  {(!project.equipment || project.equipment.length === 0) && <p className="text-center text-slate-400 text-sm py-4">No equipment to return.</p>}
                 </div>
-                <div className="mb-6 md:mb-8">
-                  <label className="block text-sm font-bold text-green-900 mb-2 md:mb-3">Ended by</label>
-                  <input required value={endedBy} onChange={e => setEndedBy(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-green-50/50 outline-none transition-colors text-base md:text-lg font-bold text-green-950" placeholder="Full name..." />
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Closed By</label>
+                  <input required value={endedBy} onChange={e => setEndedBy(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" placeholder="Your full name..." />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-4 rounded-xl md:rounded-2xl font-bold hover:bg-gray-200 transition-colors active:opacity-80">Cancel</button>
-                  <button type="button" onClick={handleEndSubmit} disabled={!endedBy || isEnding} className="flex-1 bg-green-700 text-white py-4 rounded-xl md:rounded-2xl font-bold hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg active:opacity-80">
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button type="button" onClick={() => setModalOpen(false)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">Cancel</button>
+                  <button type="button" onClick={handleEndSubmit} disabled={!endedBy || isEnding} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm text-sm active:opacity-80">
                     {isEnding ? 'Processing...' : 'End Project'}
                   </button>
                 </div>
               </>
             ) : (
-              <div className="text-center py-6 md:py-8">
-                <div className="w-20 h-20 md:w-24 md:h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <AlertTriangle size={40} className="text-orange-500" />
+              <div className="text-center py-6">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle size={24} className="text-red-500" />
                 </div>
-                <h3 className="text-xl md:text-2xl font-black text-green-950 mb-3 md:mb-4">Incomplete Return</h3>
-                <p className="text-gray-600 mb-8 md:mb-10 text-sm md:text-lg font-medium">Some equipment was not ticked as returned. Are you sure you want to end the project?</p>
-                <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-                  <button type="button" onClick={() => setWarningOpen(false)} className="flex-1 bg-gray-100 text-gray-800 py-4 rounded-xl md:rounded-2xl font-bold hover:bg-gray-200 transition-colors active:opacity-80">No, go back</button>
-                  <button type="button" onClick={handleEndSubmit} disabled={isEnding} className="flex-1 bg-red-600 text-white py-4 rounded-xl md:rounded-2xl font-bold hover:bg-red-700 transition-colors shadow-lg active:opacity-80">
-                    {isEnding ? 'Processing...' : 'Yes, end it'}
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Incomplete Return</h3>
+                <p className="text-slate-500 text-sm mb-8">Some equipment was not ticked as returned. Close project anyway?</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button type="button" onClick={() => setWarningOpen(false)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">Go Back</button>
+                  <button type="button" onClick={handleEndSubmit} disabled={isEnding} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-medium hover:bg-red-700 transition-colors shadow-sm text-sm active:opacity-80">
+                    {isEnding ? 'Processing...' : 'Force Close'}
                   </button>
                 </div>
               </div>

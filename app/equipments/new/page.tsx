@@ -10,7 +10,7 @@ export default function NewEquipment() {
   const[code, setCode] = useState('');
   const [compCode, setCompCode] = useState('');
   const[equipCode, setEquipCode] = useState('');
-  const [picture, setPicture] = useState('');
+  const[picture, setPicture] = useState('');
   const[isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,64 +29,69 @@ export default function NewEquipment() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-white p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] shadow-lg border border-green-100 animate-in">
-      <h1 className="text-2xl md:text-3xl font-black text-green-950 mb-6 md:mb-8 border-b-2 border-green-50 pb-4 md:pb-6">Register Equipment</h1>
+    <div className="max-w-2xl mx-auto animate-in">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Register Equipment</h1>
+        <p className="text-sm text-slate-500 mt-1">Add a new tool, vehicle, or component to the database.</p>
+      </div>
       
-      <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
-        <div>
-          <label className="block text-sm font-bold text-green-900 mb-3">Equipment Type</label>
-          <select value={type} onChange={e => setType(e.target.value)} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-green-50/50 outline-none transition-colors font-bold text-green-950 cursor-pointer text-base md:text-lg">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Type Selector */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Classification</label>
+          <select value={type} onChange={e => setType(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm">
             <option value="MAIN">Main Equipment</option>
             <option value="COMPONENT">Equipment Component</option>
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-green-50/30 p-5 md:p-6 rounded-2xl md:rounded-[2rem] border border-green-100">
+        {/* Details Grid */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5">
           {type === 'MAIN' ? (
             <>
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-green-900 mb-2 md:mb-3">Equipment Name</label>
-                <input required value={name} onChange={e => setName(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-white outline-none transition-colors text-base md:text-lg font-bold text-green-950" placeholder="e.g. Heavy Duty Excavator" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Name</label>
+                <input required value={name} onChange={e => setName(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. Heavy Duty Excavator" />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-green-900 mb-2 md:mb-3">Equipment Code</label>
-                <input required value={code} onChange={e => setCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-white outline-none transition-colors font-mono font-bold text-green-900 text-base md:text-lg" placeholder="e.g. EX-2049" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Code</label>
+                <input required value={code} onChange={e => setCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. EX-2049" />
               </div>
             </>
           ) : (
             <>
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-green-900 mb-2 md:mb-3">Component Code</label>
-                <input required value={compCode} onChange={e => setCompCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-white outline-none transition-colors font-mono font-bold text-green-900 text-base md:text-lg" placeholder="e.g. COMP-90X" />
+                <label className="block text-sm font-medium text-slate-700 mb-2">Component Code</label>
+                <input required value={compCode} onChange={e => setCompCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. COMP-90X" />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-green-900 mb-2 md:mb-3">Linked Equipment Code</label>
-                <input required value={equipCode} onChange={e => setEquipCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border-2 border-green-100 focus:border-green-600 focus:ring-0 rounded-xl md:rounded-2xl p-4 bg-white outline-none transition-colors font-mono font-bold text-green-900 text-base md:text-lg" placeholder="e.g. EX-2049" />
-                <p className="text-xs text-green-700 mt-2 font-bold">This securely links the component to the defined Main Equipment.</p>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Linked Parent Code</label>
+                <input required value={equipCode} onChange={e => setEquipCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. EX-2049" />
+                <p className="text-[11px] text-slate-500 mt-2">Links this component to an existing Main Equipment.</p>
               </div>
             </>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-green-900 mb-3 md:mb-4">Thumbnail Picture (Optional)</label>
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border-2 border-dashed border-green-200">
-            {picture ? (
-              <img src={picture} alt="Preview" className="w-24 h-24 rounded-2xl object-cover border-2 border-green-200 shadow-md" />
-            ) : (
-              <div className="w-24 h-24 rounded-2xl bg-gray-50 shadow-inner flex items-center justify-center border border-gray-200"><ImageIcon className="text-gray-300" size={32}/></div>
-            )}
+        {/* Picture */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-4">Thumbnail Image</label>
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+              {picture ? <img src={picture} alt="Preview" className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={24}/>}
+            </div>
             <div className="flex-1 text-center sm:text-left">
-              <label className="bg-green-50 border-2 border-green-200 text-green-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-green-100 transition-colors inline-block shadow-sm active:opacity-80">
-                Choose Image
+              <label className="bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer hover:bg-slate-50 transition-colors inline-block shadow-sm">
+                Browse Files
                 <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
               </label>
-              <p className="text-xs text-gray-500 mt-3 font-bold">JPEG, PNG or WEBP.</p>
+              <p className="text-[11px] text-slate-400 mt-2">JPEG, PNG or WEBP.</p>
             </div>
           </div>
         </div>
 
-        <button type="submit" disabled={isSubmitting} className="w-full bg-green-800 text-white py-4 md:py-5 rounded-2xl font-black text-lg md:text-xl hover:bg-green-900 shadow-xl transition-all disabled:opacity-50 mt-6 active:opacity-80">
+        <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50 mt-2">
           {isSubmitting ? 'Saving...' : 'Save Record'}
         </button>
       </form>

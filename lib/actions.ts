@@ -41,9 +41,33 @@ export async function endProject(projectId: string, endedBy: string, returnedEqu
     }
   }
   revalidatePath('/');
+  revalidatePath(`/projects/${projectId}`);
   revalidatePath('/history');
   redirect('/history');
 }
+
+// --- NEW CAPABILITIES ---
+export async function addStaffToProject(projectId: string, name: string) {
+  await prisma.employee.create({
+    data: { name, projectId }
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function addEquipmentToProject(projectId: string, equipmentId: string) {
+  // Prevent duplicate assignment
+  const existing = await prisma.assignedEquipment.findFirst({
+    where: { projectId, equipmentId, returned: false }
+  });
+  
+  if (!existing) {
+    await prisma.assignedEquipment.create({
+      data: { projectId, equipmentId }
+    });
+  }
+  revalidatePath(`/projects/${projectId}`);
+}
+// ------------------------
 
 export async function createEquipment(data: { type: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
   if (data.type === 'MAIN' && data.code) {

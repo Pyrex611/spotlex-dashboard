@@ -12,84 +12,82 @@ export default async function HistoryPage() {
   });
 
   return (
-    <div className="animate-in">
+    <div className="animate-in max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-green-900">Project History</h1>
-        <p className="text-green-700 mt-2">Archive of completed environmental deployments.</p>
+        <h1 className="text-2xl font-bold text-slate-900">Archive</h1>
+        <p className="text-slate-500 mt-1 text-sm">Records of all completed deployments.</p>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {pastProjects.map(proj => (
-          <div key={proj.id} className="bg-white p-6 md:p-10 rounded-[2.5rem] shadow-md border border-green-100 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-2 h-full bg-gray-300" />
+          <div key={proj.id} className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
             
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8 border-b-2 border-green-50 pb-8">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-5 mb-6 border-b border-slate-100 pb-6">
               <div>
-                <h2 className="text-3xl font-black text-green-950 mb-3">{proj.name}</h2>
-                <div className="flex flex-wrap items-center gap-3 text-sm font-bold text-green-700">
-                  <span className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"><Calendar size={16}/> {format(proj.startDate, 'MMM dd, yyyy')}</span>
-                  <span className="text-green-300">➜</span>
-                  <span className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100"><Calendar size={16}/> {proj.endDate ? format(proj.endDate, 'MMM dd, yyyy') : 'N/A'}</span>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">{proj.name}</h2>
+                <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                  <Calendar size={14}/> {format(proj.startDate, 'MMM dd, yyyy')}
+                  <span className="text-slate-300">→</span>
+                  <Calendar size={14}/> {proj.endDate ? format(proj.endDate, 'MMM dd, yyyy') : 'N/A'}
                 </div>
               </div>
-              <div className="bg-gray-50 border-2 border-gray-100 px-6 py-4 rounded-2xl text-right md:min-w-[200px]">
-                <p className="text-xs text-gray-400 uppercase font-black tracking-widest mb-1">Ended By</p>
-                <p className="text-gray-800 font-extrabold text-lg flex items-center justify-end gap-2"><User size={18} className="text-gray-400"/> {proj.endedBy || 'Unknown'}</p>
+              <div className="bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-left md:text-right min-w-[160px]">
+                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Closed By</p>
+                <p className="text-slate-700 font-semibold text-sm flex items-center md:justify-end gap-1.5"><User size={14} className="text-slate-400"/> {proj.endedBy || 'Unknown'}</p>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-10">
+            <div className="grid md:grid-cols-2 gap-8">
               <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <User size={18} className="text-green-600" />
-                  <h3 className="text-sm uppercase tracking-widest text-green-600 font-black">Assigned Staff</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <User size={14} className="text-emerald-600" />
+                  <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold">Deployed Staff</h3>
                 </div>
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-2">
                   {proj.employees.map(emp => (
-                    <span key={emp.id} className="bg-white text-green-900 px-4 py-2 rounded-xl text-sm font-bold border-2 border-green-100 shadow-sm">{emp.name}</span>
+                    <span key={emp.id} className="bg-white text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200">{emp.name}</span>
                   ))}
-                  {proj.employees.length === 0 && <span className="text-sm text-gray-500 font-medium italic">No staff assigned</span>}
+                  {proj.employees.length === 0 && <span className="text-xs text-slate-400 italic">No staff recorded</span>}
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Wrench size={18} className="text-green-600" />
-                  <h3 className="text-sm uppercase tracking-widest text-green-600 font-black">Equipment Manifest</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <Wrench size={14} className="text-emerald-600" />
+                  <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold">Equipment Manifest</h3>
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   {proj.equipment.map(eq => (
-                    <li key={eq.id} className="flex items-center justify-between bg-gray-50/50 border border-gray-100 p-3.5 rounded-2xl">
-                      <div className="flex flex-col">
-                        <span className="font-extrabold text-gray-900 text-sm mb-1">{eq.equipment.name}</span>
-                        <span className="text-xs font-mono text-gray-500 bg-white px-2 py-0.5 rounded border border-gray-100 inline-block w-fit">{eq.equipment.code}</span>
+                    <li key={eq.id} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-800 text-xs">{eq.equipment.name}</span>
+                        <span className="text-[10px] font-mono text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200 hidden sm:inline-block">{eq.equipment.code}</span>
                       </div>
-                      <div className="flex flex-col items-end gap-1.5 min-w-[100px]">
+                      <div className="shrink-0">
                         {eq.returned ? (
-                          <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1.5 rounded-lg border border-green-100">
-                            <CheckCircle2 size={16} className="text-green-600" />
-                            <span className="text-xs text-green-700 font-bold uppercase tracking-wider">Returned</span>
+                          <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded text-[10px] text-emerald-700 font-bold border border-emerald-100">
+                            <CheckCircle2 size={12} /> RETURNED
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
-                            <XCircle size={16} className="text-red-500" />
-                            <span className="text-xs text-red-600 font-bold uppercase tracking-wider">Missing</span>
+                          <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded text-[10px] text-red-600 font-bold border border-red-100">
+                            <XCircle size={12} /> MISSING
                           </div>
                         )}
                       </div>
                     </li>
                   ))}
-                  {proj.equipment.length === 0 && <span className="text-sm text-gray-500 font-medium italic">No equipment assigned</span>}
+                  {proj.equipment.length === 0 && <span className="text-xs text-slate-400 italic">No equipment recorded</span>}
                 </ul>
               </div>
             </div>
           </div>
         ))}
         {pastProjects.length === 0 && (
-          <div className="text-center py-24 bg-white/50 rounded-[3rem] border-2 border-green-200 border-dashed">
-            <Info size={48} className="text-green-300 mx-auto mb-4" />
-            <h3 className="text-2xl font-black text-green-900 mb-2">No Past Projects</h3>
-            <p className="text-green-600 font-medium">Archived and completed projects will appear here.</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <Info size={32} className="text-slate-300 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-slate-800 mb-1">No Archives Found</h3>
+            <p className="text-slate-500 text-sm">Ended projects will be documented here.</p>
           </div>
         )}
       </div>
