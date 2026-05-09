@@ -1,37 +1,80 @@
 "use server"
 
-import prisma from './db';
+import { createServer } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+/**
+ * UTILITY: Upload Image to Supabase Storage
+ */
+async function uploadImage(file: File, folder: string) {
+  const supabase = await createServer();
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+  const filePath = `${folder}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('equipments')
+    .upload(filePath, file);
+
+  if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+  const { data } = supabase.storage
+    .from('equipments')
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
+/**
+ * PROJECT ACTIONS
+ */
 export async function createProject(data: { name: string; employees: string[]; equipmentIds: string[] }) {
-  await prisma.project.create({
-    data: {
-      name: data.name,
-      employees: { create: data.employees.map(name => ({ name })) },
-      equipment: { create: data.equipmentIds.map(id => ({ equipmentId: id })) }
-    }
-  });
+  const supabase = await createServer();
+
+  const { data: project, error: pError } = await supabase
+    .from('projects')
+    .insert([{ name: data.name, status: 'ONGOING' }])
+    .select()
+    .single();
+
+  if (pError) throw new Error(`Project creation failed: ${pError.message}`);
+
+  if (data.employees.length > 0) {
+    await supabase.from('employees').insert(
+      data.employees.map(name => ({ name, project_id: project.id, status: 'ASSIGNED' }))
+    );
+  }
+
+  if (data.equipmentIds.length > 0) {
+    await supabase.from('assigned_equipment').insert(
+      data.equipmentIds.map(id => ({ equipment_id: id, project_id: project.id, status: 'ASSIGNED' }))
+    );
+  }
+
   revalidatePath('/');
   redirect('/');
 }
 
 export async function endProject(projectId: string, endedBy: string, returnedEquipmentIds: string[]) {
-  await prisma.project.update({
-    where: { id: projectId },
-    data: { status: 'ENDED', endDate: new Date(), endedBy: endedBy }
-  });
+  const supabase = await createServer();
 
-  const assignedItems = await prisma.assignedEquipment.findMany({
-    where: { projectId, status: 'ASSIGNED' }
-  });
+  await supabase
+    .from('projects')
+    .update({ status: 'ENDED', end_date: new Date().toISOString(), ended_by: endedBy })
+    .eq('id', projectId);
 
-  for (const item of assignedItems) {
-    const status = returnedEquipmentIds.includes(item.equipmentId) ? 'RETURNED' : 'MISSING';
-    await prisma.assignedEquipment.update({
-      where: { id: item.id },
-      data: { status }
-    });
+  const { data: assignedItems } = await supabase
+    .from('assigned_equipment')
+    .select('id, equipment_id')
+    .eq('project_id', projectId)
+    .eq('status', 'ASSIGNED');
+
+  if (assignedItems) {
+    for (const item of assignedItems) {
+      const status = returnedEquipmentIds.includes(item.equipment_id) ? 'RETURNED' : 'MISSING';
+      await supabase.from('assigned_equipment').update({ status }).eq('id', item.id);
+    }
   }
 
   revalidatePath('/');
@@ -41,76 +84,123 @@ export async function endProject(projectId: string, endedBy: string, returnedEqu
 }
 
 export async function addStaffToProject(projectId: string, name: string) {
-  await prisma.employee.create({ data: { name, projectId } });
+  const supabase = await createServer();
+  await supabase.from('employees').insert([{ name, project_id: projectId, status: 'ASSIGNED' }]);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function addEquipmentToProject(projectId: string, equipmentId: string) {
-  await prisma.assignedEquipment.create({ data: { projectId, equipmentId, status: 'ASSIGNED' } });
+  const supabase = await createServer();
+  await supabase.from('assigned_equipment').insert([{ project_id: projectId, equipment_id: equipmentId, status: 'ASSIGNED' }]);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function recallStaff(employeeId: string, projectId: string) {
-  await prisma.employee.update({
-    where: { id: employeeId },
-    data: { status: 'RECALLED', recallDate: new Date() }
-  });
+  const supabase = await createServer();
+  await supabase
+    .from('employees')
+    .update({ status: 'RECALLED', recall_date: new Date().toISOString() })
+    .eq('id', employeeId);
   revalidatePath(`/projects/${projectId}`);
 }
 
 export async function recallEquipment(assignmentId: string, recalledBy: string, projectId: string) {
-  await prisma.assignedEquipment.update({
-    where: { id: assignmentId },
-    data: { status: 'RECALLED', recalledBy, recallDate: new Date() }
-  });
+  const supabase = await createServer();
+  await supabase
+    .from('assigned_equipment')
+    .update({ status: 'RECALLED', recalled_by: recalledBy, recall_date: new Date().toISOString() })
+    .eq('id', assignmentId);
   revalidatePath(`/projects/${projectId}`);
 }
 
-export async function createEquipment(data: { type: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
-  if (data.type === 'MAIN' && data.code) {
-    await prisma.equipment.create({ data: { name: data.name, code: data.code, picture: data.picture } });
-  } else if (data.type === 'COMPONENT' && data.componentCode && data.equipmentCode) {
-    await prisma.equipmentComponent.create({ data: { componentCode: data.componentCode, equipmentCode: data.equipmentCode, picture: data.picture } });
+/**
+ * REGISTRY ACTIONS
+ */
+export async function createEquipment(formData: FormData) {
+  const supabase = await createServer();
+  const type = formData.get('type') as string;
+  const name = formData.get('name') as string;
+  const code = formData.get('code') as string;
+  const componentCode = formData.get('componentCode') as string;
+  const equipmentCode = formData.get('equipmentCode') as string;
+  const imageFile = formData.get('picture') as File;
+
+  let imageUrl = null;
+  if (imageFile && imageFile.size > 0) {
+    imageUrl = await uploadImage(imageFile, type === 'MAIN' ? 'main' : 'components');
   }
+
+  if (type === 'MAIN' && code) {
+    await supabase.from('equipments').insert([{ name, code, picture: imageUrl }]);
+  } else if (type === 'COMPONENT' && componentCode && equipmentCode) {
+    await supabase.from('equipment_components').insert([{ 
+      component_code: componentCode, 
+      equipment_code: equipmentCode, 
+      picture: imageUrl 
+    }]);
+  }
+
   revalidatePath('/equipments');
   redirect('/equipments');
 }
 
-export async function updateEquipment(id: string, data: { type?: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
-  if (data.type === 'MAIN' || data.code) {
-    await prisma.equipment.update({ where: { id }, data: { name: data.name, code: data.code, picture: data.picture } });
-  } else if (data.componentCode) {
-    await prisma.equipmentComponent.update({ where: { id }, data: { componentCode: data.componentCode, equipmentCode: data.equipmentCode, picture: data.picture } });
+export async function updateEquipment(id: string, formData: FormData) {
+  const supabase = await createServer();
+  const type = formData.get('type') as string;
+  const name = formData.get('name') as string;
+  const code = formData.get('code') as string;
+  const componentCode = formData.get('componentCode') as string;
+  const equipmentCode = formData.get('equipmentCode') as string;
+  const imageFile = formData.get('picture') as File;
+
+  let updateData: any = {};
+  if (imageFile && imageFile.size > 0) {
+    updateData.picture = await uploadImage(imageFile, type === 'MAIN' ? 'main' : 'components');
   }
+
+  if (type === 'MAIN') {
+    updateData = { ...updateData, name, code };
+    await supabase.from('equipments').update(updateData).eq('id', id);
+  } else {
+    updateData = { ...updateData, component_code: componentCode, equipment_code: equipmentCode };
+    await supabase.from('equipment_components').update(updateData).eq('id', id);
+  }
+
   revalidatePath('/equipments');
+  revalidatePath(`/equipments/${id}`);
 }
 
 export async function searchEquipment(query: string) {
+  const supabase = await createServer();
   if (!query) return [];
-  return await prisma.equipment.findMany({ where: { OR:[ { name: { contains: query } }, { code: { contains: query } } ] }, take: 6 });
+  const { data } = await supabase
+    .from('equipments')
+    .select('*')
+    .or(`name.ilike.%${query}%,code.ilike.%${query}%`)
+    .limit(6);
+  return data || [];
 }
 
 export async function bulkUploadCSV(records: any[]): Promise<{ success: boolean; message: string; }> {
-  if (!records || records.length === 0) return { success: false, message: "File is empty." };
+  const supabase = await createServer();
+  if (!records || records.length === 0) return { success: false, message: "File is empty" };
   try {
     for (const record of records) {
       if (record.code && record.name) {
-        await prisma.equipment.upsert({
-          where: { code: String(record.code) },
-          update: { name: String(record.name) },
-          create: { code: String(record.code), name: String(record.name) }
-        });
+        await supabase.from('equipments').upsert({ 
+          code: String(record.code), 
+          name: String(record.name) 
+        }, { onConflict: 'code' });
       } else if (record.componentCode && record.equipmentCode) {
-        await prisma.equipmentComponent.upsert({
-          where: { componentCode: String(record.componentCode) },
-          update: { equipmentCode: String(record.equipmentCode) },
-          create: { componentCode: String(record.componentCode), equipmentCode: String(record.equipmentCode) }
-        });
+        await supabase.from('equipment_components').upsert({ 
+          component_code: String(record.componentCode), 
+          equipment_code: String(record.equipmentCode) 
+        }, { onConflict: 'component_code' });
       }
     }
     revalidatePath('/equipments');
-    return { success: true, message: "Import complete." };
+    return { success: true, message: "Import complete" };
   } catch (e) {
-    return { success: false, message: "Import failed." };
+    return { success: false, message: "Import failed" };
   }
 }

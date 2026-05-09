@@ -1,17 +1,23 @@
-import prisma from '@/lib/db';
+import { createServer } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
-  // Await the params promise strictly for Next.js 15
-  const resolvedParams = await context.params;
+  const { id } = await context.params;
   
   try {
-    const project = await prisma.project.findUnique({
-      where: { id: resolvedParams.id },
-      include: { employees: true, equipment: { include: { equipment: true } } }
-    });
+    const supabase = await createServer();
+    
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select(`
+        *,
+        employees(*),
+        assigned_equipment(*, equipment:equipments(*))
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!project) {
+    if (error || !project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 

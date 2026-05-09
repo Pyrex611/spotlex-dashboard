@@ -44,15 +44,18 @@ The content is organized as follows:
 AGENTS.md
 app/api/equipments/route.ts
 app/api/projects/[id]/route.ts
+app/equipments/[id]/EquipmentClient.tsx
 app/equipments/[id]/page.tsx
 app/equipments/new/page.tsx
 app/equipments/page.tsx
 app/favicon.ico
 app/globals.css
+app/history/[id]/page.tsx
 app/history/page.tsx
 app/layout.tsx
 app/page.tsx
 app/projects/[id]/page.tsx
+app/projects/[id]/ProjectClient.tsx
 app/projects/new/page.tsx
 CLAUDE.md
 eslint.config.mjs
@@ -62,10 +65,13 @@ next.config.ts
 package.json
 postcss.config.mjs
 prisma/dev.db
+prisma/migrations/20260504141038_initialize/migration.sql
+prisma/migrations/migration_lock.toml
 prisma/schema.prisma
 public/file.svg
 public/globe.svg
 public/next.svg
+public/spotlex_logo.jpg
 public/vercel.svg
 public/window.svg
 README.md
@@ -140,734 +146,73 @@ export async function GET() {
 }
 </file>
 
-<file path="app/api/projects/[id]/route.ts">
+<file path="app/history/[id]/page.tsx">
 import prisma from '@/lib/db';
-import { NextResponse } from 'next/server';
+import Link from 'next/link';
+import { format, isAfter } from 'date-fns';
+import { User, Wrench, Calendar, Info, ArrowLeft, CheckCircle2, XCircle, UserMinus, Plus } from 'lucide-react';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export default async function HistoryDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const project = await prisma.project.findUnique({
-    where: { id: params.id },
-    include: { employees: true, equipment: { include: { equipment: true } } }
-  });
-  return NextResponse.json(project);
-}
-</file>
-
-<file path="app/equipments/[id]/page.tsx">
-"use client"
-
-import { useEffect, useState } from 'react';
-import { updateEquipment } from '@/lib/actions';
-import { ImageIcon } from 'lucide-react';
-
-export default function EditEquipment({ params }: { params: { id: string } }) {
-  const [eq, setEq] = useState<any>(null);
-  const[editMode, setEditMode] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/equipments').then(r => r.json()).then(data => {
-      setEq(data.find((item: any) => item.id === params.id));
-    });
-  }, [params.id]);
-
-  if (!eq) return <div className="p-8 text-center text-green-700">Loading...</div>;
-
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setEq({ ...eq, picture: reader.result });
-      reader.readAsDataURL(file);
-    }
-  };
-
-  return (
-    <div className="max-w-xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-green-100">
-      <div className="flex flex-col items-center mb-8">
-        <div className="w-32 h-32 rounded-2xl bg-green-50 border-2 border-green-100 overflow-hidden mb-4 flex justify-center items-center">
-          {eq.picture ? <img src={eq.picture} className="w-full h-full object-cover" /> : <ImageIcon size={48} className="text-green-200" />}
-        </div>
-        <h1 className="text-2xl font-bold text-green-900">{eq.name || 'Component'}</h1>
-        <span className="font-mono text-green-600 bg-green-50 px-3 py-1 rounded-md mt-2">{eq.code || eq.componentCode}</span>
-      </div>
-
-      {editMode ? (
-        <form action={() => { updateEquipment(eq.id, { name: eq.name, code: eq.code, picture: eq.picture }); setEditMode(false); }} className="space-y-6 border-t border-green-50 pt-6">
-          <div>
-            <label className="block text-sm font-semibold text-green-800 mb-2">Name</label>
-            <input value={eq.name || ''} onChange={e => setEq({...eq, name: e.target.value})} className="w-full border border-green-200 rounded-xl p-3 bg-white" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-green-800 mb-2">Code</label>
-            <input value={eq.code || ''} onChange={e => setEq({...eq, code: e.target.value})} className="w-full border border-green-200 rounded-xl p-3 bg-white" />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-green-800 mb-2">Update Picture</label>
-            <input type="file" accept="image/*" onChange={handleImage} />
-          </div>
-          <button type="submit" className="w-full bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800">Save Changes</button>
-        </form>
-      ) : (
-        <div className="border-t border-green-50 pt-6 mt-4">
-          <button onClick={() => setEditMode(true)} className="w-full bg-green-100 text-green-800 py-3 rounded-xl font-bold hover:bg-green-200 transition">
-            Edit Equipment Info
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-</file>
-
-<file path="app/equipments/new/page.tsx">
-"use client"
-
-import { useState } from 'react';
-import { createEquipment } from '@/lib/actions';
-import { ImageIcon } from 'lucide-react';
-
-export default function NewEquipment() {
-  const [type, setType] = useState('MAIN');
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [compCode, setCompCode] = useState('');
-  const [equipCode, setEquipCode] = useState('');
-  const [picture, setPicture] = useState('');
-
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPicture(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  return (
-    <div className="max-w-xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-green-100">
-      <h1 className="text-2xl font-bold text-green-900 mb-6">Register Equipment</h1>
-      
-      <form action={() => createEquipment({ type, name, code, componentCode: compCode, equipmentCode: equipCode, picture })} className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-green-800 mb-2">Equipment Type</label>
-          <select value={type} onChange={e => setType(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50 border">
-            <option value="MAIN">Main Equipment</option>
-            <option value="COMPONENT">Equipment Component</option>
-          </select>
-        </div>
-
-        {type === 'MAIN' ? (
-          <>
-            <div>
-              <label className="block text-sm font-semibold text-green-800 mb-2">Equipment Name</label>
-              <input required value={name} onChange={e => setName(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50 border" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-green-800 mb-2">Equipment Code</label>
-              <input required value={code} onChange={e => setCode(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50 border" />
-            </div>
-          </>
-        ) : (
-          <>
-            <div>
-              <label className="block text-sm font-semibold text-green-800 mb-2">Component Code</label>
-              <input required value={compCode} onChange={e => setCompCode(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50 border" />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-green-800 mb-2">Linked Equipment Code</label>
-              <input required value={equipCode} onChange={e => setEquipCode(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50 border" />
-            </div>
-          </>
-        )}
-
-        <div>
-          <label className="block text-sm font-semibold text-green-800 mb-2">Picture (Optional)</label>
-          <div className="flex items-center gap-4">
-            {picture ? (
-              <img src={picture} alt="Preview" className="w-20 h-20 rounded-xl object-cover border border-green-200" />
-            ) : (
-              <div className="w-20 h-20 rounded-xl bg-green-50 flex items-center justify-center border border-green-200"><ImageIcon className="text-green-300"/></div>
-            )}
-            <input type="file" accept="image/*" onChange={handleImage} className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 cursor-pointer" />
-          </div>
-        </div>
-
-        <button type="submit" className="w-full bg-green-700 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-800 shadow-md">Save Record</button>
-      </form>
-    </div>
-  );
-}
-</file>
-
-<file path="app/equipments/page.tsx">
-"use client"
-
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Plus, Upload, Image as ImageIcon } from 'lucide-react';
-import { bulkUploadCSV } from '@/lib/actions';
-import Papa from 'papaparse';
-
-export default function EquipmentsPage() {
-  const[equipments, setEquipments] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetch('/api/equipments').then(r => r.json()).then(setEquipments);
-  },[]);
-
-  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        complete: async (results) => {
-          await bulkUploadCSV(results.data);
-          window.location.reload();
-        }
-      });
-    }
-  };
-
-  return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-green-900">Equipment Registry</h1>
-        <p className="text-green-700 mt-2">Manage tools and machinery.</p>
-      </div>
-
-      <ul className="space-y-4">
-        {/* Top Add Item Row */}
-        <li className="flex items-center justify-between gap-4 h-24">
-          <Link href="/equipments/new" className="flex-1 flex items-center h-full bg-white border-2 border-dashed border-green-300 rounded-2xl hover:bg-green-50 transition p-4 cursor-pointer">
-            <div className="w-16 h-16 rounded-xl bg-green-100 flex-shrink-0 flex items-center justify-center mr-6">
-              <Plus size={32} className="text-green-600" />
-            </div>
-            <span className="text-lg font-bold text-green-700">Add a new equipment</span>
-          </Link>
-          <label className="w-24 h-full bg-green-700 hover:bg-green-800 text-white rounded-2xl flex flex-col items-center justify-center cursor-pointer shadow-md transition-colors">
-            <Upload size={28} className="mb-1" />
-            <span className="text-[10px] font-bold tracking-widest uppercase">CSV / XLSX</span>
-            <input type="file" accept=".csv" className="hidden" onChange={handleBulkUpload} />
-          </label>
-        </li>
-
-        {/* Equipment List */}
-        {equipments.map(eq => (
-          <li key={eq.id}>
-            <Link href={`/equipments/${eq.id}`} className="flex items-center h-28 bg-white border border-green-100 shadow-sm hover:shadow-md rounded-2xl p-4 transition-all group">
-              <div className="w-20 h-20 rounded-xl bg-green-50 border border-green-100 flex-shrink-0 mr-6 overflow-hidden flex items-center justify-center">
-                {eq.picture ? (
-                   <img src={eq.picture} alt={eq.name} className="w-full h-full object-cover" />
-                ) : (
-                   <ImageIcon size={32} className="text-green-300" />
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-green-900 group-hover:text-green-700 transition">{eq.name || 'Component'}</h3>
-                <div className="mt-2 flex items-center gap-3">
-                  <span className="text-sm font-mono bg-green-100 text-green-800 px-3 py-1 rounded-md">{eq.code || eq.componentCode}</span>
-                  <span className="text-xs uppercase tracking-wider font-bold text-gray-500">{eq.type || (eq.componentCode ? 'COMPONENT' : 'MAIN')}</span>
-                </div>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-</file>
-
-<file path="app/globals.css">
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-</file>
-
-<file path="app/history/page.tsx">
-import prisma from '@/lib/db';
-import { format } from 'date-fns';
-import { CheckCircle2, XCircle } from 'lucide-react';
-
-export const dynamic = 'force-dynamic';
-
-export default async function HistoryPage() {
-  const pastProjects = await prisma.project.findMany({
-    where: { status: 'ENDED' },
-    include: { employees: true, equipment: { include: { equipment: true } } },
-    orderBy: { endDate: 'desc' }
+    where: { id },
+    include: { 
+      employees: { orderBy: { joinDate: 'asc' } }, 
+      equipment: { include: { equipment: true }, orderBy: { assignDate: 'asc' } } 
+    },
   });
 
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-green-900">Project History</h1>
-        <p className="text-green-700 mt-2">Archive of completed environmental deployments.</p>
-      </div>
-
-      <div className="space-y-6">
-        {pastProjects.map(proj => (
-          <div key={proj.id} className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-green-100 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-gray-400" />
-            
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
-              <div>
-                <h2 className="text-2xl font-extrabold text-green-950 mb-1">{proj.name}</h2>
-                <p className="text-sm text-green-600 font-medium">
-                  {format(proj.startDate, 'MMM dd, yyyy')} — {proj.endDate ? format(proj.endDate, 'MMM dd, yyyy') : 'N/A'}
-                </p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 px-4 py-2 rounded-xl text-right">
-                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Ended By</p>
-                <p className="text-gray-800 font-semibold">{proj.endedBy}</p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8 border-t border-green-50 pt-6">
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-green-500 font-bold mb-3">Assigned Staff</h3>
-                <div className="flex flex-wrap gap-2">
-                  {proj.employees.map(emp => (
-                    <span key={emp.id} className="bg-green-50 text-green-800 px-3 py-1.5 rounded-lg text-sm font-medium border border-green-100">{emp.name}</span>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-green-500 font-bold mb-3">Equipment Manifest</h3>
-                <ul className="space-y-2">
-                  {proj.equipment.map(eq => (
-                    <li key={eq.id} className="flex items-center justify-between bg-white border border-green-100 p-2.5 rounded-xl shadow-sm">
-                      <div>
-                        <span className="font-semibold text-green-900 text-sm">{eq.equipment.name}</span>
-                        <span className="ml-2 text-xs font-mono text-gray-500">{eq.equipment.code}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5" title={eq.returned ? "Returned" : "Unaccounted"}>
-                        {eq.returned ? (
-                          <><CheckCircle2 size={18} className="text-green-500" /><span className="text-xs text-green-600 font-bold">Returned</span></>
-                        ) : (
-                          <><XCircle size={18} className="text-red-400" /><span className="text-xs text-red-500 font-bold">Pending</span></>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        ))}
-        {pastProjects.length === 0 && (
-          <div className="text-center py-20 bg-white rounded-3xl border border-green-100 border-dashed">
-            <h3 className="text-xl font-bold text-green-800">No Past Projects</h3>
-            <p className="text-green-600">Ended projects will appear here.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="app/layout.tsx">
-"use client"
-
-import './globals.css';
-import { useState } from 'react';
-import { Menu, Home, Wrench, History, X } from 'lucide-react';
-import Link from 'next/link';
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  if (!project) return null;
 
   return (
-    <html lang="en">
-      <head>
-        <title>Spotlex World Environmental Solutions</title>
-        <link rel="icon" href="/spotlex_logo.jpg" />
-      </head>
-      <body className="bg-green-50 text-green-950 font-sans min-h-screen pb-16 md:pb-0 flex flex-col md:flex-row">
-        
-        {/* Mobile Overlay & Sidebar */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-green-950/20 z-40 md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        )}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-800 text-white transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="p-6 flex justify-between items-center bg-green-900 border-b border-green-700">
-            <h2 className="text-xl font-bold tracking-wider">MENU</h2>
-            <button className="md:hidden text-green-100" onClick={() => setSidebarOpen(false)}><X size={24}/></button>
+    <div className="animate-in max-w-4xl mx-auto">
+      <Link href="/history" className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-emerald-700 mb-6"><ArrowLeft size={16} /> Back to Archive</Link>
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div className="border-b pb-6 mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">{project.name}</h1>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4 text-xs">
+            <div><p className="text-slate-400 uppercase font-bold">Commenced</p><p className="font-semibold text-slate-700">{format(project.startDate, 'MMM dd, yyyy')}</p></div>
+            <div><p className="text-slate-400 uppercase font-bold">Closed</p><p className="font-semibold text-slate-700">{format(project.endDate!, 'MMM dd, yyyy')}</p></div>
+            <div><p className="text-slate-400 uppercase font-bold">Supervisor</p><p className="font-semibold text-slate-700">{project.endedBy}</p></div>
           </div>
-          <nav className="p-4 space-y-2">
-            <div className="text-xs font-semibold text-green-300 mb-2 uppercase tracking-widest mt-4">Dashboard</div>
-            <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-green-700 transition" onClick={() => setSidebarOpen(false)}>
-              <Home size={20} /> Projects
-            </Link>
-            <Link href="/equipments" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-green-700 transition" onClick={() => setSidebarOpen(false)}>
-              <Wrench size={20} /> Equipments
-            </Link>
-            <div className="text-xs font-semibold text-green-300 mb-2 uppercase tracking-widest mt-6">Records</div>
-            <Link href="/history" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-green-700 transition" onClick={() => setSidebarOpen(false)}>
-              <History size={20} /> History
-            </Link>
-          </nav>
-        </aside>
-
-        <main className="flex-1 flex flex-col h-screen overflow-y-auto">
-          {/* Header */}
-          <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 shadow-sm px-4 md:px-8 py-4 flex items-center border-b border-green-100">
-            <button className="md:hidden mr-4 text-green-800" onClick={() => setSidebarOpen(true)}>
-              <Menu size={28} />
-            </button>
-            <div className="flex items-center gap-3">
-              <img src="/spotlex_logo.jpg" alt="Spotlex Logo" className="h-10 w-10 rounded-full border-2 border-green-600 object-cover" />
-              <h1 className="text-xl md:text-2xl font-bold text-green-800">Spotlex World</h1>
-            </div>
-          </header>
-          
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
-            {children}
-          </div>
-        </main>
-
-        {/* Mobile Footer Menu */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-green-100 flex justify-around p-3 z-40">
-          <Link href="/" className="flex flex-col items-center text-green-700 gap-1">
-            <Home size={24} />
-            <span className="text-[10px] font-medium uppercase tracking-wider">Home</span>
-          </Link>
-          <Link href="/equipments" className="flex flex-col items-center text-green-700 gap-1">
-            <Wrench size={24} />
-            <span className="text-[10px] font-medium uppercase tracking-wider">Equipments</span>
-          </Link>
         </div>
-      </body>
-    </html>
-  );
-}
-</file>
 
-<file path="app/page.tsx">
-import prisma from '@/lib/db';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
-import { format } from 'date-fns';
-
-export const dynamic = 'force-dynamic';
-
-export default async function ProjectsPage() {
-  const projects = await prisma.project.findMany({
-    where: { status: 'ONGOING' },
-    include: { _count: { select: { equipment: true, employees: true } } },
-    orderBy: { startDate: 'desc' }
-  });
-
-  return (
-    <div>
-      <div className="mb-8 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-green-900">Ongoing Projects</h1>
-          <p className="text-green-700 mt-2">Manage current environmental deployments.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/projects/new" className="group">
-          <div className="h-full min-h-[160px] rounded-2xl border-2 border-dashed border-green-300 bg-white/50 flex flex-col items-center justify-center text-green-600 hover:bg-green-100 hover:border-green-500 transition-all cursor-pointer">
-            <div className="h-12 w-12 rounded-full bg-green-200 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus size={24} className="text-green-700" />
-            </div>
-            <span className="mt-4 font-semibold">Add New Project</span>
-          </div>
-        </Link>
-
-        {projects.map((proj) => (
-          <Link key={proj.id} href={`/projects/${proj.id}`}>
-            <div className="h-full rounded-2xl bg-white shadow-sm border border-green-100 p-6 hover:shadow-md transition-shadow flex flex-col cursor-pointer relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-1 h-full bg-green-500" />
-              <h2 className="text-xl font-bold text-green-900 mb-2 truncate">{proj.name}</h2>
-              <div className="text-sm text-green-700 space-y-2 mt-auto pt-4">
-                <p><strong>Started:</strong> {format(proj.startDate, 'MMM dd, yyyy')}</p>
-                <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-lg">
-                  <span>Equipments Assigned</span>
-                  <span className="font-bold text-green-800 bg-green-200 px-2 py-0.5 rounded-full">{proj._count.equipment}</span>
-                </div>
-                <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-lg">
-                  <span>Employees Assigned</span>
-                  <span className="font-bold text-green-800 bg-green-200 px-2 py-0.5 rounded-full">{proj._count.employees}</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="app/projects/[id]/page.tsx">
-"use client"
-
-import { useEffect, useState } from 'react';
-import { endProject } from '@/lib/actions';
-import { CheckSquare, Square, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
-
-export default function ProjectDetails({ params }: { params: { id: string } }) {
-  const [project, setProject] = useState<any>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const[warningOpen, setWarningOpen] = useState(false);
-  
-  const [endedBy, setEndedBy] = useState('');
-  const [checkedEq, setCheckedEq] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    fetch(`/api/projects/${params.id}`).then(r => r.json()).then(setProject);
-  }, [params.id]);
-
-  if (!project) return <div className="p-8 text-center text-green-700 animate-pulse">Loading project details...</div>;
-
-  const handleEndInitiate = () => {
-    const initialChecks: any = {};
-    project.equipment.forEach((e: any) => initialChecks[e.equipment.id] = false);
-    setCheckedEq(initialChecks);
-    setModalOpen(true);
-  };
-
-  const handleEndSubmit = async () => {
-    const total = project.equipment.length;
-    const checkedCount = Object.values(checkedEq).filter(Boolean).length;
-
-    if (checkedCount < total && !warningOpen) {
-      setWarningOpen(true);
-      return;
-    }
-    
-    const returnedIds = Object.keys(checkedEq).filter(k => checkedEq[k]);
-    await endProject(project.id, endedBy, returnedIds);
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-green-100">
-        <div className="flex justify-between items-start mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <div>
-            <h1 className="text-3xl font-extrabold text-green-900">{project.name}</h1>
-            <p className="text-green-600 mt-1">Started on {format(new Date(project.startDate), 'MMMM dd, yyyy')}</p>
-          </div>
-          <span className={`px-4 py-1.5 rounded-full text-sm font-bold tracking-wide ${project.status === 'ONGOING' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-            {project.status}
-          </span>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8 mt-8">
-          <div>
-            <h3 className="text-sm uppercase tracking-widest text-green-400 font-bold mb-4">Assigned Employees</h3>
-            <ul className="space-y-2">
-              {project.employees.map((emp: any) => (
-                <li key={emp.id} className="bg-green-50/50 p-3 rounded-xl text-green-900 font-medium border border-green-50">{emp.name}</li>
-              ))}
+            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><User size={16} className="text-emerald-600"/> Personnel Timeline</h3>
+            <ul className="space-y-3">
+              {project.employees.map(emp => {
+                 const isLate = isAfter(new Date(emp.joinDate), new Date(project.startDate));
+                 return (
+                   <li key={emp.id} className="p-3 border rounded-xl bg-slate-50 flex flex-col gap-1">
+                     <div className="flex justify-between items-center">
+                       <span className="font-bold text-slate-700 text-sm">{emp.name}</span>
+                       {emp.status === 'RECALLED' ? <span className="bg-yellow-100 text-yellow-700 text-[9px] px-1.5 py-0.5 rounded font-black">RECALLED</span> : isLate ? <span className="bg-emerald-100 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-black">JOINED LATE</span> : <span className="text-[9px] text-slate-400 font-bold">ORIGINAL</span>}
+                     </div>
+                     <p className="text-[10px] text-slate-400 italic">Joined: {format(emp.joinDate, 'MMM dd, HH:mm')}{emp.recallDate && ` | Recalled: ${format(emp.recallDate, 'MMM dd')}`}</p>
+                   </li>
+                 );
+              })}
             </ul>
           </div>
           <div>
-            <h3 className="text-sm uppercase tracking-widest text-green-400 font-bold mb-4">Assigned Equipment</h3>
-            <ul className="space-y-2">
-              {project.equipment.map((eq: any) => (
-                <li key={eq.id} className="bg-green-50/50 p-3 rounded-xl text-green-900 font-medium flex justify-between border border-green-50">
-                  <span>{eq.equipment.name}</span>
-                  <span className="font-mono text-xs text-green-600 bg-white px-2 py-1 rounded shadow-sm">{eq.equipment.code}</span>
+            <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><Wrench size={16} className="text-emerald-600"/> Equipment Manifest</h3>
+            <ul className="space-y-3">
+              {project.equipment.map(assign => (
+                <li key={assign.id} className="p-3 border rounded-xl bg-slate-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div><p className="font-bold text-slate-700 text-sm">{assign.equipment.name}</p><p className="text-[10px] font-mono text-slate-400">{assign.equipment.code}</p></div>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${assign.status === 'RETURNED' ? 'bg-emerald-100 text-emerald-700' : assign.status === 'RECALLED' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{assign.status}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 border-t pt-2 mt-1">
+                    {assign.status === 'RECALLED' ? `Recalled by ${assign.recalledBy} on ${format(assign.recallDate!, 'MMM dd')}` : `Assigned on ${format(assign.assignDate, 'MMM dd')}`}
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-
-        {project.status === 'ONGOING' && (
-          <div className="mt-10 border-t border-green-100 pt-8 flex justify-end">
-            <button onClick={handleEndInitiate} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200 px-8 py-3 rounded-xl font-bold transition-all shadow-sm">
-              End Project
-            </button>
-          </div>
-        )}
       </div>
-
-      {/* End Project Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-green-950/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-3xl w-full max-w-lg shadow-2xl relative">
-            {!warningOpen ? (
-              <>
-                <h2 className="text-2xl font-bold text-green-900 mb-6 border-b pb-4">End Project Checklist</h2>
-                <div className="space-y-3 max-h-60 overflow-y-auto mb-6 pr-2">
-                  {project.equipment.map((eq: any) => (
-                    <div key={eq.equipment.id} className="flex items-center justify-between p-3 bg-green-50 rounded-xl cursor-pointer hover:bg-green-100 transition" onClick={() => setCheckedEq({ ...checkedEq, [eq.equipment.id]: !checkedEq[eq.equipment.id] })}>
-                      <div>
-                        <p className="font-semibold text-green-900">{eq.equipment.name}</p>
-                        <p className="text-xs font-mono text-green-600">{eq.equipment.code}</p>
-                      </div>
-                      {checkedEq[eq.equipment.id] ? <CheckSquare className="text-green-600" size={24} /> : <Square className="text-green-300" size={24} />}
-                    </div>
-                  ))}
-                </div>
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-green-800 mb-2">Name of person ending project</label>
-                  <input required value={endedBy} onChange={e => setEndedBy(e.target.value)} className="w-full border-green-200 focus:ring-green-600 rounded-xl p-3 bg-white border" placeholder="Enter your full name" />
-                </div>
-                <div className="flex gap-4">
-                  <button onClick={() => setModalOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold">Cancel</button>
-                  <button onClick={handleEndSubmit} disabled={!endedBy} className="flex-1 bg-green-700 text-white py-3 rounded-xl font-bold hover:bg-green-800 disabled:opacity-50">End Project</button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-6">
-                <AlertTriangle size={64} className="text-orange-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-green-900 mb-2">Not all Equipment has been confirmed</h3>
-                <p className="text-gray-600 mb-8">Some equipment assigned to this project was not ticked as returned. Are you sure you want to end the project?</p>
-                <div className="flex gap-4">
-                  <button onClick={() => setWarningOpen(false)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold">No, go back</button>
-                  <button onClick={handleEndSubmit} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700">Yes, end project</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-</file>
-
-<file path="app/projects/new/page.tsx">
-"use client"
-
-import { useState } from 'react';
-import { createProject, searchEquipment } from '@/lib/actions';
-import { Plus, X, Search } from 'lucide-react';
-
-export default function NewProject() {
-  const[name, setName] = useState('');
-  const [empName, setEmpName] = useState('');
-  const[employees, setEmployees] = useState<string[]>([]);
-  const [equipments, setEquipments] = useState<{ id: string, name: string, code: string }[]>([]);
-  
-  const[modalOpen, setModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const[searchResults, setSearchResults] = useState<any[]>([]);
-
-  const addEmployee = () => {
-    if (empName.trim()) {
-      setEmployees([...employees, empName.trim()]);
-      setEmpName('');
-    }
-  };
-
-  const handleSearch = async (val: string) => {
-    setSearch(val);
-    if (val.length > 1) {
-      const res = await searchEquipment(val);
-      setSearchResults(res);
-    } else {
-      setSearchResults([]);
-    }
-  };
-
-  const addEquipment = (eq: any) => {
-    if (!equipments.find(e => e.id === eq.id)) {
-      setEquipments([...equipments, eq]);
-    }
-    setModalOpen(false);
-    setSearch('');
-  };
-
-  return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-green-100">
-      <h1 className="text-2xl font-bold text-green-900 mb-6 border-b border-green-50 pb-4">Initialize New Project</h1>
-      
-      <form action={() => createProject({ name, employees, equipmentIds: equipments.map(e => e.id) })} className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-green-800 mb-2">Project Name</label>
-          <input required value={name} onChange={e => setName(e.target.value)} className="w-full border-green-200 focus:ring-green-600 focus:border-green-600 rounded-xl p-3 bg-green-50/50" placeholder="e.g. Lagos Lagoon Cleanup" />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-green-800 mb-2">Assigned Employees</label>
-          <div className="flex gap-2 mb-3">
-            <input value={empName} onChange={e => setEmpName(e.target.value)} className="flex-1 border-green-200 focus:ring-green-600 rounded-xl p-3 bg-green-50/50" placeholder="Employee Name" />
-            <button type="button" onClick={addEmployee} className="bg-green-600 text-white px-4 rounded-xl hover:bg-green-700 transition"><Plus size={20}/></button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {employees.map((emp, i) => (
-              <span key={i} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                {emp} <X size={14} className="cursor-pointer" onClick={() => setEmployees(employees.filter((_, idx) => idx !== i))} />
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-green-800 mb-2">Assigned Equipment</label>
-          <button type="button" onClick={() => setModalOpen(true)} className="w-full py-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 font-medium hover:bg-green-50 transition flex justify-center items-center gap-2">
-            <Plus size={20}/> Assign Equipment
-          </button>
-          <div className="mt-4 space-y-2">
-            {equipments.map((eq, i) => (
-              <div key={i} className="flex justify-between bg-white border border-green-100 p-3 rounded-lg shadow-sm">
-                <span className="font-medium text-green-900">{eq.name || 'Unnamed'} ({eq.code})</span>
-                <X size={18} className="text-red-400 cursor-pointer" onClick={() => setEquipments(equipments.filter((_, idx) => idx !== i))} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button type="submit" className="w-full bg-green-700 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-800 shadow-md transition-all">Create Project</button>
-      </form>
-
-      {/* Equipment Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-green-950/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-green-900">Search Equipment</h3>
-              <X size={24} className="cursor-pointer text-gray-400 hover:text-green-700" onClick={() => setModalOpen(false)} />
-            </div>
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-3.5 text-green-500" size={18} />
-              <input value={search} onChange={e => handleSearch(e.target.value)} autoFocus className="w-full pl-10 pr-4 py-3 border-green-200 rounded-xl bg-green-50 focus:ring-green-600" placeholder="Type name or code..." />
-            </div>
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {searchResults.map(res => (
-                <div key={res.id} onClick={() => addEquipment(res)} className="p-3 bg-white border border-green-100 rounded-lg cursor-pointer hover:bg-green-50 flex justify-between">
-                  <span className="font-semibold text-green-900">{res.name}</span>
-                  <span className="text-xs font-mono bg-green-100 text-green-800 px-2 py-1 rounded">{res.code}</span>
-                </div>
-              ))}
-              {search.length > 1 && searchResults.length === 0 && <p className="text-sm text-center text-gray-500">No equipment found.</p>}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -898,118 +243,6 @@ const eslintConfig = defineConfig([
 export default eslintConfig;
 </file>
 
-<file path="lib/actions.ts">
-"use server"
-
-import prisma from './db';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-
-export async function createProject(data: { name: string; employees: string[]; equipmentIds: string[] }) {
-  const project = await prisma.project.create({
-    data: {
-      name: data.name,
-      employees: {
-        create: data.employees.map(name => ({ name }))
-      },
-      equipment: {
-        create: data.equipmentIds.map(id => ({ equipmentId: id }))
-      }
-    }
-  });
-  revalidatePath('/');
-  redirect('/');
-}
-
-export async function endProject(projectId: string, endedBy: string, returnedEquipmentIds: string[]) {
-  await prisma.project.update({
-    where: { id: projectId },
-    data: {
-      status: 'ENDED',
-      endDate: new Date(),
-      endedBy: endedBy,
-    }
-  });
-
-  const assignments = await prisma.assignedEquipment.findMany({ where: { projectId } });
-  
-  for (const assignment of assignments) {
-    if (returnedEquipmentIds.includes(assignment.equipmentId)) {
-      await prisma.assignedEquipment.update({
-        where: { id: assignment.id },
-        data: { returned: true }
-      });
-    }
-  }
-  revalidatePath('/');
-  revalidatePath('/history');
-  redirect('/history');
-}
-
-export async function createEquipment(data: { type: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
-  if (data.type === 'MAIN' && data.code) {
-    await prisma.equipment.create({
-      data: {
-        name: data.name,
-        code: data.code,
-        picture: data.picture
-      }
-    });
-  } else if (data.type === 'COMPONENT' && data.componentCode && data.equipmentCode) {
-    await prisma.equipmentComponent.create({
-      data: {
-        componentCode: data.componentCode,
-        equipmentCode: data.equipmentCode,
-        picture: data.picture
-      }
-    });
-  }
-  revalidatePath('/equipments');
-  redirect('/equipments');
-}
-
-export async function updateEquipment(id: string, data: { name: string; code: string; picture?: string }) {
-  await prisma.equipment.update({
-    where: { id },
-    data: { name: data.name, code: data.code, picture: data.picture }
-  });
-  revalidatePath('/equipments');
-  revalidatePath(`/equipments/${id}`);
-}
-
-export async function bulkUploadCSV(records: any[]) {
-  for (const record of records) {
-    if (record.code && record.type === 'MAIN') {
-      await prisma.equipment.upsert({
-        where: { code: record.code },
-        update: { name: record.name },
-        create: { code: record.code, name: record.name }
-      });
-    } else if (record.componentCode && record.type === 'COMPONENT') {
-      await prisma.equipmentComponent.upsert({
-        where: { componentCode: record.componentCode },
-        update: { equipmentCode: record.equipmentCode },
-        create: { componentCode: record.componentCode, equipmentCode: record.equipmentCode }
-      });
-    }
-  }
-  revalidatePath('/equipments');
-}
-
-export async function searchEquipment(query: string) {
-  if (!query) return[];
-  return await prisma.equipment.findMany({
-    where: {
-      OR:[
-        { name: { contains: query } },
-        { code: { contains: query } }
-      ]
-    },
-    take: 5
-  });
-}
-</file>
-
 <file path="lib/db.ts">
 import { PrismaClient } from '@prisma/client';
 
@@ -1032,41 +265,6 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 </file>
 
-<file path="package.json">
-{
-  "name": "spotlex-dashboard",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^1.14.0",
-    "next": "16.2.4",
-    "papaparse": "^5.5.3",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "repomix": "^1.14.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.4",
-    "prisma": "^6.19.3",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
-}
-</file>
-
 <file path="postcss.config.mjs">
 const config = {
   plugins: {
@@ -1077,59 +275,69 @@ const config = {
 export default config;
 </file>
 
-<file path="prisma/schema.prisma">
-generator client {
-  provider = "prisma-client-js"
-}
+<file path="prisma/migrations/20260504141038_initialize/migration.sql">
+-- CreateTable
+CREATE TABLE "Project" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "endDate" DATETIME,
+    "endedBy" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'ONGOING'
+);
 
-datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
-}
+-- CreateTable
+CREATE TABLE "Employee" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "joinDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" TEXT NOT NULL DEFAULT 'ASSIGNED',
+    "recallDate" DATETIME,
+    CONSTRAINT "Employee_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
 
-model Project {
-  id        String              @id @default(uuid())
-  name      String
-  startDate DateTime            @default(now())
-  endDate   DateTime?
-  endedBy   String?
-  status    String              @default("ONGOING") // ONGOING, ENDED
-  employees Employee[]
-  equipment AssignedEquipment[]
-}
+-- CreateTable
+CREATE TABLE "Equipment" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT,
+    "code" TEXT NOT NULL,
+    "picture" TEXT
+);
 
-model Employee {
-  id        String  @id @default(uuid())
-  name      String
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-}
+-- CreateTable
+CREATE TABLE "EquipmentComponent" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "componentCode" TEXT NOT NULL,
+    "equipmentCode" TEXT NOT NULL,
+    "picture" TEXT,
+    CONSTRAINT "EquipmentComponent_equipmentCode_fkey" FOREIGN KEY ("equipmentCode") REFERENCES "Equipment" ("code") ON DELETE CASCADE ON UPDATE CASCADE
+);
 
-model Equipment {
-  id          String               @id @default(uuid())
-  name        String?
-  code        String               @unique
-  picture     String? // Base64 or URL
-  components  EquipmentComponent[]
-  assignments AssignedEquipment[]
-}
+-- CreateTable
+CREATE TABLE "AssignedEquipment" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectId" TEXT NOT NULL,
+    "equipmentId" TEXT NOT NULL,
+    "assignDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" TEXT NOT NULL DEFAULT 'ASSIGNED',
+    "recalledBy" TEXT,
+    "recallDate" DATETIME,
+    CONSTRAINT "AssignedEquipment_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "AssignedEquipment_equipmentId_fkey" FOREIGN KEY ("equipmentId") REFERENCES "Equipment" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
 
-model EquipmentComponent {
-  id            String    @id @default(uuid())
-  componentCode String    @unique
-  equipmentCode String
-  picture       String?
-  equipment     Equipment @relation(fields: [equipmentCode], references: [code], onDelete: Cascade)
-}
+-- CreateIndex
+CREATE UNIQUE INDEX "Equipment_code_key" ON "Equipment"("code");
 
-model AssignedEquipment {
-  id          String    @id @default(uuid())
-  projectId   String
-  equipmentId String
-  returned    Boolean   @default(false)
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-}
+-- CreateIndex
+CREATE UNIQUE INDEX "EquipmentComponent_componentCode_key" ON "EquipmentComponent"("componentCode");
+</file>
+
+<file path="prisma/migrations/migration_lock.toml">
+# Please do not edit this file manually
+# It should be added in your version-control system (e.g., Git)
+provider = "sqlite"
 </file>
 
 <file path="public/file.svg">
@@ -1225,6 +433,1390 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
     "**/*.mts"
   ],
   "exclude": ["node_modules"]
+}
+</file>
+
+<file path="app/api/projects/[id]/route.ts">
+import prisma from '@/lib/db';
+import { NextResponse } from 'next/server';
+
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
+  // Await the params promise strictly for Next.js 15
+  const resolvedParams = await context.params;
+  
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: resolvedParams.id },
+      include: { employees: true, equipment: { include: { equipment: true } } }
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(project);
+  } catch (error) {
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+</file>
+
+<file path="app/equipments/[id]/page.tsx">
+import prisma from '@/lib/db';
+import EquipmentClient from './EquipmentClient';
+import { Info } from 'lucide-react';
+
+export default async function EditEquipmentPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  
+  const main = await prisma.equipment.findUnique({ where: { id } });
+  let eq = null;
+
+  if (main) {
+    eq = { ...main, type: 'MAIN' };
+  } else {
+    const comp = await prisma.equipmentComponent.findUnique({ where: { id } });
+    if (comp) eq = { ...comp, type: 'COMPONENT' };
+  }
+
+  if (!eq) {
+    return (
+      <div className="p-12 text-center text-red-600 bg-red-50 rounded-3xl border border-red-200 mt-10 max-w-2xl mx-auto">
+        <Info size={40} className="mx-auto mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Equipment Not Found</h2>
+        <p>This equipment configuration doesn't exist in the database.</p>
+      </div>
+    );
+  }
+
+  return <EquipmentClient eq={eq} />;
+}
+</file>
+
+<file path="app/globals.css">
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc; /* slate-50 */
+  --foreground: #0f172a; /* slate-900 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Elegant minimalist scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</file>
+
+<file path="app/page.tsx">
+import prisma from '@/lib/db';
+import Link from 'next/link';
+import { Plus, Users, Wrench } from 'lucide-react';
+import { format } from 'date-fns';
+
+export const dynamic = 'force-dynamic';
+
+export default async function ProjectsPage() {
+  const projects = await prisma.project.findMany({
+    where: { status: 'ONGOING' },
+    include: { _count: { select: { equipment: true, employees: true } } },
+    orderBy: { startDate: 'desc' }
+  });
+
+  return (
+    <div className="animate-in">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Active Deployments</h1>
+        <p className="text-slate-500 mt-1 text-sm">Manage your ongoing environmental projects.</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Link href="/projects/new" className="group h-full min-h-[200px]">
+          <div className="h-full w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all cursor-pointer">
+            <div className="h-12 w-12 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm group-hover:border-emerald-200">
+              <Plus size={20} className="text-current" />
+            </div>
+            <span className="mt-3 font-medium text-sm">Initialize New Project</span>
+          </div>
+        </Link>
+
+        {projects.map((proj) => (
+          <Link key={proj.id} href={`/projects/${proj.id}`}>
+            <div className="h-full min-h-[200px] rounded-2xl bg-white border border-slate-200 p-6 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-slate-300 transition-all flex flex-col cursor-pointer relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+              <h2 className="text-lg font-semibold text-slate-800 mb-1 truncate pr-2">{proj.name}</h2>
+              <p className="text-xs font-medium text-slate-500 mb-6">Started {format(proj.startDate, 'MMM dd, yyyy')}</p>
+              
+              <div className="space-y-2 mt-auto">
+                <div className="flex items-center justify-between bg-slate-50 px-3 py-2.5 rounded-lg">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Wrench size={14} className="text-slate-400" />
+                    <span className="text-xs font-medium">Equipments</span>
+                  </div>
+                  <span className="font-semibold text-slate-700 bg-white px-2 py-0.5 rounded text-xs border border-slate-200">{proj._count.equipment}</span>
+                </div>
+                <div className="flex items-center justify-between bg-slate-50 px-3 py-2.5 rounded-lg">
+                  <div className="flex items-center gap-2 text-slate-600">
+                    <Users size={14} className="text-slate-400" />
+                    <span className="text-xs font-medium">Employees</span>
+                  </div>
+                  <span className="font-semibold text-slate-700 bg-white px-2 py-0.5 rounded text-xs border border-slate-200">{proj._count.employees}</span>
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="prisma/schema.prisma">
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Project {
+  id        String              @id @default(uuid())
+  name      String
+  startDate DateTime            @default(now())
+  endDate   DateTime?
+  endedBy   String?
+  status    String              @default("ONGOING") // ONGOING, ENDED
+  employees Employee[]
+  equipment AssignedEquipment[]
+}
+
+model Employee {
+  id         String    @id @default(uuid())
+  name       String
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  joinDate   DateTime  @default(now())
+  status     String    @default("ASSIGNED") // ASSIGNED, RECALLED
+  recallDate DateTime?
+}
+
+model Equipment {
+  id          String               @id @default(uuid())
+  name        String?
+  code        String               @unique
+  picture     String?
+  components  EquipmentComponent[]
+  assignments AssignedEquipment[]
+}
+
+model EquipmentComponent {
+  id            String    @id @default(uuid())
+  componentCode String    @unique
+  equipmentCode String
+  picture       String?
+  equipment     Equipment @relation(fields:[equipmentCode], references: [code], onDelete: Cascade)
+}
+
+model AssignedEquipment {
+  id          String    @id @default(uuid())
+  projectId   String
+  equipmentId String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  assignDate  DateTime  @default(now())
+  status      String    @default("ASSIGNED") // ASSIGNED, RETURNED, MISSING, RECALLED
+  recalledBy  String?
+  recallDate  DateTime?
+}
+</file>
+
+<file path="app/equipments/[id]/EquipmentClient.tsx">
+"use client"
+
+import { useState } from 'react';
+import { updateEquipment } from '@/lib/actions';
+import { ImageIcon, Save } from 'lucide-react';
+
+export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
+  const [eq, setEq] = useState(initialEq);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const isMain = eq.type === 'MAIN' || eq.code;
+
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setEq({ ...eq, picture: reader.result });
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await updateEquipment(eq.id, { 
+      name: eq.name, 
+      code: eq.code, 
+      componentCode: eq.componentCode,
+      equipmentCode: eq.equipmentCode,
+      picture: eq.picture,
+      type: eq.type
+    });
+    setSaving(false);
+    setEditMode(false);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto animate-in space-y-6">
+      
+      {/* Header Profile */}
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
+        <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden mb-5 flex justify-center items-center relative group">
+          {eq.picture ? <img src={eq.picture} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300" />}
+          {editMode && (
+             <label className="absolute inset-0 bg-slate-900/50 flex items-center justify-center cursor-pointer opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
+               <span className="text-white text-[10px] font-semibold bg-slate-800 px-3 py-1.5 rounded-md shadow-sm text-center">Change</span>
+               <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
+             </label>
+          )}
+        </div>
+        <h1 className="text-xl font-bold text-slate-900 text-center">{eq.name || 'Component'}</h1>
+        <div className="flex items-center gap-2 mt-3">
+          <span className="font-mono text-slate-700 bg-slate-100 px-3 py-1 rounded text-xs border border-slate-200">{eq.code || eq.componentCode}</span>
+          <span className={`text-[9px] uppercase font-bold tracking-wider px-2 py-1 rounded ${isMain ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+            {isMain ? 'MAIN' : 'COMPONENT'}
+          </span>
+        </div>
+      </div>
+
+      {/* Form / Actions */}
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+        {editMode ? (
+          <form onSubmit={handleSave} className="space-y-5">
+            {isMain ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Name</label>
+                  <input required value={eq.name || ''} onChange={e => setEq({...eq, name: e.target.value})} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Code</label>
+                  <input required value={eq.code || ''} onChange={e => setEq({...eq, code: e.target.value})} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Component Code</label>
+                  <input required value={eq.componentCode || ''} onChange={e => setEq({...eq, componentCode: e.target.value})} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Linked Equipment Code</label>
+                  <input required value={eq.equipmentCode || ''} onChange={e => setEq({...eq, equipmentCode: e.target.value})} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" />
+                </div>
+              </>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <button type="button" onClick={() => setEditMode(false)} className="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-medium hover:bg-slate-50 transition-colors text-sm">Cancel</button>
+              <button type="submit" disabled={saving} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-medium hover:bg-emerald-700 transition-colors shadow-sm flex justify-center items-center gap-2 text-sm">
+                <Save size={16} /> {saving ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex justify-center">
+            <button type="button" onClick={() => setEditMode(true)} className="w-full md:w-auto px-8 bg-slate-50 border border-slate-200 text-slate-700 py-3 rounded-xl font-semibold text-sm hover:bg-slate-100 transition-all">
+              Edit Configuration
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="app/history/page.tsx">
+import prisma from '@/lib/db';
+import Link from 'next/link';
+import { format, isAfter } from 'date-fns';
+import { User, Wrench, Calendar, Info, ArrowRight } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
+
+export default async function HistoryPage() {
+  const pastProjects = await prisma.project.findMany({
+    where: { status: 'ENDED' },
+    include: { employees: true, equipment: true },
+    orderBy: { endDate: 'desc' }
+  });
+
+  return (
+    <div className="animate-in max-w-5xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Project Archive</h1>
+        <p className="text-slate-500 mt-1 text-sm">Review documentation of all completed deployments.</p>
+      </div>
+
+      <div className="space-y-6">
+        {pastProjects.map(proj => (
+          <Link href={`/history/${proj.id}`} key={proj.id} className="block group">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 group-hover:border-slate-300 transition-all relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-slate-300" />
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">{proj.name} <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all" /></h2>
+                  <p className="text-xs text-slate-500 mt-1">{format(proj.startDate, 'MMM dd, yyyy')} — {format(proj.endDate!, 'MMM dd, yyyy')}</p>
+                </div>
+                <div className="text-right"><p className="text-[10px] text-slate-400 font-bold uppercase">Closed By</p><p className="text-sm font-semibold">{proj.endedBy}</p></div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 border-t pt-6">
+                <div>
+                  <h3 className="text-[10px] uppercase font-bold text-slate-400 mb-3 flex items-center gap-1.5"><User size={12}/> Staff Summary</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {proj.employees.slice(0, 3).map(emp => {
+                      let color = "bg-slate-100 text-slate-600";
+                      if (emp.status === 'RECALLED') color = "bg-yellow-100 text-yellow-700";
+                      else if (isAfter(new Date(emp.joinDate), new Date(proj.startDate))) color = "bg-emerald-100 text-emerald-700";
+                      return <span key={emp.id} className={`${color} px-2 py-1 rounded text-[10px] font-bold`}>{emp.name}</span>;
+                    })}
+                    {proj.employees.length > 3 && <span className="text-[10px] font-bold text-slate-400">+{proj.employees.length - 3} more</span>}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-[10px] uppercase font-bold text-slate-400 mb-3 flex items-center gap-1.5"><Wrench size={12}/> Equipment Summary</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {proj.equipment.slice(0, 3).map(eq => (
+                      <span key={eq.id} className={`px-2 py-1 rounded text-[10px] font-bold ${eq.status === 'RETURNED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{eq.status}</span>
+                    ))}
+                    {proj.equipment.length > 3 && <span className="text-[10px] font-bold text-slate-400">+{proj.equipment.length - 3} more</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+        {pastProjects.length === 0 && <div className="text-center py-20 bg-white border border-dashed rounded-2xl text-slate-400">Archive is currently empty.</div>}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="app/layout.tsx">
+"use client"
+
+import './globals.css';
+import { useState } from 'react';
+import { Menu, Home, Wrench, History, X } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path));
+
+  return (
+    <html lang="en">
+      <head>
+        <title>Spotlex World - Enterprise</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+      </head>
+      <body className="bg-slate-50 text-slate-900 min-h-[100dvh] flex flex-col md:flex-row antialiased">
+        {sidebarOpen && <div className="fixed inset-0 bg-slate-900/40 z-[40] md:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
+        <aside className={`fixed inset-y-0 left-0 z-[50] w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 md:relative md:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <img src="/spotlex_logo.jpg" alt="Logo" className="w-8 h-8 rounded object-cover" />
+              <h2 className="font-bold text-slate-800">Spotlex World</h2>
+            </div>
+            <button type="button" className="md:hidden" onClick={() => setSidebarOpen(false)}><X size={20}/></button>
+          </div>
+          <nav className="p-4 space-y-1">
+            <Link href="/" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium ${isActive('/') && pathname === '/' ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`} onClick={() => setSidebarOpen(false)}>
+              <Home size={18} /> Projects
+            </Link>
+            <Link href="/equipments" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium ${isActive('/equipments') ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`} onClick={() => setSidebarOpen(false)}>
+              <Wrench size={18} /> Equipments
+            </Link>
+            <Link href="/history" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium ${isActive('/history') ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50'}`} onClick={() => setSidebarOpen(false)}>
+              <History size={18} /> History
+            </Link>
+          </nav>
+        </aside>
+        <main className="flex-1 flex flex-col min-h-[100dvh]">
+          <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 h-16 px-4 md:px-8 flex items-center border-b border-slate-200">
+            <button type="button" className="md:hidden mr-4 p-2" onClick={() => setSidebarOpen(true)}><Menu size={20} /></button>
+            <h1 className="text-lg font-semibold text-slate-800">Dashboard</h1>
+          </header>
+          <div className="p-4 md:p-8 pb-32 md:pb-8 w-full max-w-7xl mx-auto flex-1 relative z-10">{children}</div>
+        </main>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 pb-6 z-40 shadow-lg">
+          <Link href="/" className={`flex flex-col items-center gap-1 ${isActive('/') && pathname === '/' ? 'text-emerald-600' : 'text-slate-500'}`}><Home size={20} /><span className="text-[10px]">Home</span></Link>
+          <Link href="/equipments" className={`flex flex-col items-center gap-1 ${isActive('/equipments') ? 'text-emerald-600' : 'text-slate-500'}`}><Wrench size={20} /><span className="text-[10px]">Registry</span></Link>
+          <Link href="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-emerald-600' : 'text-slate-500'}`}><History size={20} /><span className="text-[10px]">History</span></Link>
+        </div>
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="app/projects/[id]/page.tsx">
+import prisma from '@/lib/db';
+import ProjectClient from './ProjectClient';
+import { Info } from 'lucide-react';
+
+export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: { 
+      employees: true, 
+      equipment: { include: { equipment: true } } 
+    }
+  });
+
+  if (!project) {
+    return (
+      <div className="p-12 text-center text-red-600 bg-white rounded-2xl border border-slate-200 mt-10 max-w-lg mx-auto">
+        <Info size={32} className="mx-auto mb-4 opacity-20" />
+        <h2 className="text-xl font-bold">Project Missing</h2>
+        <p className="text-slate-500 text-sm mt-1">This project could not be found.</p>
+      </div>
+    );
+  }
+
+  return <ProjectClient project={project} />;
+}
+</file>
+
+<file path="lib/actions.ts">
+"use server"
+
+import prisma from './db';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+export async function createProject(data: { name: string; employees: string[]; equipmentIds: string[] }) {
+  await prisma.project.create({
+    data: {
+      name: data.name,
+      employees: { create: data.employees.map(name => ({ name })) },
+      equipment: { create: data.equipmentIds.map(id => ({ equipmentId: id })) }
+    }
+  });
+  revalidatePath('/');
+  redirect('/');
+}
+
+export async function endProject(projectId: string, endedBy: string, returnedEquipmentIds: string[]) {
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { status: 'ENDED', endDate: new Date(), endedBy: endedBy }
+  });
+
+  const assignedItems = await prisma.assignedEquipment.findMany({
+    where: { projectId, status: 'ASSIGNED' }
+  });
+
+  for (const item of assignedItems) {
+    const status = returnedEquipmentIds.includes(item.equipmentId) ? 'RETURNED' : 'MISSING';
+    await prisma.assignedEquipment.update({
+      where: { id: item.id },
+      data: { status }
+    });
+  }
+
+  revalidatePath('/');
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath('/history');
+  redirect('/history');
+}
+
+export async function addStaffToProject(projectId: string, name: string) {
+  await prisma.employee.create({ data: { name, projectId } });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function addEquipmentToProject(projectId: string, equipmentId: string) {
+  await prisma.assignedEquipment.create({ data: { projectId, equipmentId, status: 'ASSIGNED' } });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function recallStaff(employeeId: string, projectId: string) {
+  await prisma.employee.update({
+    where: { id: employeeId },
+    data: { status: 'RECALLED', recallDate: new Date() }
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function recallEquipment(assignmentId: string, recalledBy: string, projectId: string) {
+  await prisma.assignedEquipment.update({
+    where: { id: assignmentId },
+    data: { status: 'RECALLED', recalledBy, recallDate: new Date() }
+  });
+  revalidatePath(`/projects/${projectId}`);
+}
+
+export async function createEquipment(data: { type: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
+  if (data.type === 'MAIN' && data.code) {
+    await prisma.equipment.create({ data: { name: data.name, code: data.code, picture: data.picture } });
+  } else if (data.type === 'COMPONENT' && data.componentCode && data.equipmentCode) {
+    await prisma.equipmentComponent.create({ data: { componentCode: data.componentCode, equipmentCode: data.equipmentCode, picture: data.picture } });
+  }
+  revalidatePath('/equipments');
+  redirect('/equipments');
+}
+
+export async function updateEquipment(id: string, data: { type?: string; name?: string; code?: string; componentCode?: string; equipmentCode?: string; picture?: string }) {
+  if (data.type === 'MAIN' || data.code) {
+    await prisma.equipment.update({ where: { id }, data: { name: data.name, code: data.code, picture: data.picture } });
+  } else if (data.componentCode) {
+    await prisma.equipmentComponent.update({ where: { id }, data: { componentCode: data.componentCode, equipmentCode: data.equipmentCode, picture: data.picture } });
+  }
+  revalidatePath('/equipments');
+}
+
+export async function searchEquipment(query: string) {
+  if (!query) return [];
+  return await prisma.equipment.findMany({ where: { OR:[ { name: { contains: query } }, { code: { contains: query } } ] }, take: 6 });
+}
+
+export async function bulkUploadCSV(records: any[]): Promise<{ success: boolean; message: string; }> {
+  if (!records || records.length === 0) return { success: false, message: "File is empty." };
+  try {
+    for (const record of records) {
+      if (record.code && record.name) {
+        await prisma.equipment.upsert({
+          where: { code: String(record.code) },
+          update: { name: String(record.name) },
+          create: { code: String(record.code), name: String(record.name) }
+        });
+      } else if (record.componentCode && record.equipmentCode) {
+        await prisma.equipmentComponent.upsert({
+          where: { componentCode: String(record.componentCode) },
+          update: { equipmentCode: String(record.equipmentCode) },
+          create: { componentCode: String(record.componentCode), equipmentCode: String(record.equipmentCode) }
+        });
+      }
+    }
+    revalidatePath('/equipments');
+    return { success: true, message: "Import complete." };
+  } catch (e) {
+    return { success: false, message: "Import failed." };
+  }
+}
+</file>
+
+<file path="app/equipments/new/page.tsx">
+"use client"
+
+import { useState } from 'react';
+import { createEquipment } from '@/lib/actions';
+import { ImageIcon } from 'lucide-react';
+
+export default function NewEquipment() {
+  const[type, setType] = useState('MAIN');
+  const [name, setName] = useState('');
+  const[code, setCode] = useState('');
+  const [compCode, setCompCode] = useState('');
+  const[equipCode, setEquipCode] = useState('');
+  const[picture, setPicture] = useState('');
+  const[isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPicture(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await createEquipment({ type, name, code, componentCode: compCode, equipmentCode: equipCode, picture });
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto animate-in">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Register Equipment</h1>
+        <p className="text-sm text-slate-500 mt-1">Add a new tool, vehicle, or component to the database.</p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        
+        {/* Type Selector */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Classification</label>
+          <select value={type} onChange={e => setType(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm">
+            <option value="MAIN">Main Equipment</option>
+            <option value="COMPONENT">Equipment Component</option>
+          </select>
+        </div>
+
+        {/* Details Grid */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5">
+          {type === 'MAIN' ? (
+            <>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Name</label>
+                <input required value={name} onChange={e => setName(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. Heavy Duty Excavator" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Equipment Code</label>
+                <input required value={code} onChange={e => setCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. EX-2049" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Component Code</label>
+                <input required value={compCode} onChange={e => setCompCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. COMP-90X" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Linked Parent Code</label>
+                <input required value={equipCode} onChange={e => setEquipCode(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-slate-800 bg-slate-50/50 text-sm" placeholder="e.g. EX-2049" />
+                <p className="text-[11px] text-slate-500 mt-2">Links this component to an existing Main Equipment.</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Picture */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-4">Thumbnail Image</label>
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="w-20 h-20 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+              {picture ? <img src={picture} alt="Preview" className="w-full h-full object-cover" /> : <ImageIcon className="text-slate-300" size={24}/>}
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <label className="bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-medium cursor-pointer hover:bg-slate-50 transition-colors inline-block shadow-sm">
+                Browse Files
+                <input type="file" accept="image/*" onChange={handleImage} className="hidden" />
+              </label>
+              <p className="text-[11px] text-slate-400 mt-2">JPEG, PNG or WEBP.</p>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" disabled={isSubmitting} className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold text-sm hover:bg-emerald-700 shadow-sm transition-all disabled:opacity-50 mt-2">
+          {isSubmitting ? 'Saving...' : 'Save Record'}
+        </button>
+      </form>
+    </div>
+  );
+}
+</file>
+
+<file path="app/projects/[id]/ProjectClient.tsx">
+"use client"
+
+import { useState } from 'react';
+import { endProject, addStaffToProject, addEquipmentToProject, searchEquipment, recallStaff, recallEquipment } from '@/lib/actions';
+import { CheckSquare, Square, AlertTriangle, User, Wrench, Calendar, Plus, X, Search, UserMinus } from 'lucide-react';
+import { format } from 'date-fns';
+
+export default function ProjectClient({ project }: { project: any }) {
+  const [endModalOpen, setEndModalOpen] = useState(false);
+  const [recallModalOpen, setRecallModalOpen] = useState(false);
+  const [warningOpen, setWarningOpen] = useState(false);
+  const [addStaffOpen, setAddStaffOpen] = useState(false);
+  const [addEqOpen, setAddEqOpen] = useState(false);
+  
+  const [endedBy, setEndedBy] = useState('');
+  const [checkedEndEq, setCheckedEndEq] = useState<Record<string, boolean>>({});
+  const [newStaffName, setNewStaffName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [recallTarget, setRecallTarget] = useState<any>(null);
+  const [recalledBy, setRecalledBy] = useState('');
+
+  const handleEndInitiate = () => {
+    const initialChecks: Record<string, boolean> = {};
+    project.equipment?.filter((e: any) => e.status === 'ASSIGNED').forEach((e: any) => {
+      initialChecks[e.equipment.id] = false;
+    });
+    setCheckedEndEq(initialChecks);
+    setEndModalOpen(true);
+  };
+  
+  const handleEndSubmit = async () => {
+    const assignedEquipment = project.equipment?.filter((e: any) => e.status === 'ASSIGNED') || [];
+    if (Object.values(checkedEndEq).filter(Boolean).length < assignedEquipment.length && !warningOpen) {
+      setWarningOpen(true);
+      return;
+    }
+    setIsProcessing(true);
+    await endProject(project.id, endedBy, Object.keys(checkedEndEq).filter(k => checkedEndEq[k]));
+  };
+
+  const handleAddStaff = async (e?: any) => {
+    if (e) e.preventDefault();
+    if (!newStaffName.trim()) return;
+    setIsProcessing(true);
+    await addStaffToProject(project.id, newStaffName.trim());
+    setNewStaffName('');
+    setIsProcessing(false);
+    setAddStaffOpen(false);
+  };
+
+  const handleSearch = async (val: string) => { 
+    setSearchQuery(val); 
+    setSearchResults(val.length > 1 ? await searchEquipment(val) : []); 
+  };
+
+  const handleAddEquipment = async (eqId: string) => {
+    setIsProcessing(true);
+    await addEquipmentToProject(project.id, eqId);
+    setIsProcessing(false);
+    setAddEqOpen(false);
+  };
+
+  const handleEquipmentRecall = async () => {
+    if (!recalledBy.trim() || !recallTarget) return;
+    setIsProcessing(true);
+    await recallEquipment(recallTarget.id, recalledBy.trim(), project.id);
+    setIsProcessing(false);
+    setRecallModalOpen(false);
+    setRecallTarget(null);
+    setRecalledBy('');
+  };
+
+  const activeStaff = project.employees?.filter((s: any) => s.status === 'ASSIGNED');
+  const activeEq = project.equipment?.filter((e: any) => e.status === 'ASSIGNED');
+
+  return (
+    <div className="max-w-4xl mx-auto animate-in space-y-6 relative">
+      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-6 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">{project.name}</h1>
+            <p className="text-slate-500 text-sm mt-1 flex items-center gap-2"><Calendar size={14} /> Started {format(new Date(project.startDate), 'MMM dd, yyyy')}</p>
+          </div>
+          <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg uppercase tracking-wider">{project.status}</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><User size={16} className="text-emerald-600"/> Assigned Staff</h3>
+              {project.status === 'ONGOING' && <button type="button" onClick={() => setAddStaffOpen(true)} className="p-1.5 bg-slate-50 rounded-lg hover:bg-emerald-50"><Plus size={16} /></button>}
+            </div>
+            <ul className="space-y-2">
+              {activeStaff?.map((emp: any) => (
+                <li key={emp.id} className="group bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm flex justify-between items-center">
+                  <span>{emp.name}</span>
+                  <button type="button" onClick={async () => { if(confirm("Recall staff?")) await recallStaff(emp.id, project.id); }} className="md:opacity-0 group-hover:opacity-100 text-yellow-600 p-1 bg-white rounded border border-yellow-100"><UserMinus size={14} /></button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2"><Wrench size={16} className="text-emerald-600"/> Assigned Equipment</h3>
+              {project.status === 'ONGOING' && <button type="button" onClick={() => setAddEqOpen(true)} className="p-1.5 bg-slate-50 rounded-lg hover:bg-emerald-50"><Plus size={16} /></button>}
+            </div>
+            <ul className="space-y-2">
+              {activeEq?.map((eq: any) => (
+                <li key={eq.id} className="group bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] bg-white border px-1.5 py-0.5 rounded text-slate-500">{eq.equipment.code}</span>
+                    <span className="truncate">{eq.equipment.name}</span>
+                  </div>
+                  <button type="button" onClick={() => { setRecallTarget(eq); setRecallModalOpen(true); }} className="md:opacity-0 group-hover:opacity-100 text-yellow-600 p-1 bg-white rounded border border-yellow-100"><UserMinus size={14} /></button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {project.status === 'ONGOING' && (
+          <div className="mt-8 pt-6 border-t flex justify-end">
+            <button type="button" onClick={handleEndInitiate} className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 active:opacity-80">End Project</button>
+          </div>
+        )}
+      </div>
+
+      {/* Modals for Add Staff, Add Equipment, Recall, End Project */}
+      {addStaffOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
+            <h3 className="text-lg font-bold mb-4">Add Staff Member</h3>
+            <input autoFocus className="w-full border rounded-xl p-3 mb-6" placeholder="Name..." value={newStaffName} onChange={e => setNewStaffName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddStaff()} />
+            <div className="flex gap-3">
+              <button type="button" className="flex-1 bg-slate-100 py-3 rounded-xl" onClick={() => setAddStaffOpen(false)}>Cancel</button>
+              <button type="button" className="flex-1 bg-slate-800 text-white py-3 rounded-xl" onClick={handleAddStaff} disabled={isProcessing}>Add</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addEqOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
+            <div className="flex justify-between mb-4"><h3 className="font-bold">Deploy Equipment</h3><button type="button" onClick={() => setAddEqOpen(false)}><X size={18}/></button></div>
+            <input autoFocus className="w-full border rounded-xl p-3 mb-4" placeholder="Search..." value={searchQuery} onChange={e => handleSearch(e.target.value)} />
+            <div className="max-h-60 overflow-auto space-y-2">
+              {searchResults.map(res => (
+                <button type="button" key={res.id} className="w-full text-left p-3 border rounded-xl flex justify-between" onClick={() => handleAddEquipment(res.id)}>
+                  <span>{res.name}</span><span className="text-[10px] font-mono">{res.code}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {recallModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
+            <h3 className="font-bold mb-2">Recall Equipment</h3>
+            <p className="text-sm text-slate-500 mb-4">Recalling: {recallTarget?.equipment.name}</p>
+            <input autoFocus className="w-full border rounded-xl p-3 mb-6" placeholder="Your name..." value={recalledBy} onChange={e => setRecalledBy(e.target.value)} />
+            <div className="flex gap-3">
+              <button type="button" className="flex-1 bg-slate-100 py-3 rounded-xl" onClick={() => setRecallModalOpen(false)}>Cancel</button>
+              <button type="button" className="flex-1 bg-yellow-500 text-white py-3 rounded-xl" onClick={handleEquipmentRecall}>Confirm Recall</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {endModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
+            {!warningOpen ? (
+              <>
+                <h3 className="text-xl font-bold mb-4">End Project Checklist</h3>
+                <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
+                  {activeEq?.map((eq: any) => (
+                    <button type="button" key={eq.equipment.id} onClick={() => setCheckedEndEq({...checkedEndEq, [eq.equipment.id]: !checkedEndEq[eq.equipment.id]})} className={`w-full text-left p-3 border rounded-xl flex justify-between items-center ${checkedEndEq[eq.equipment.id] ? 'bg-emerald-50 border-emerald-200' : ''}`}>
+                      <div><p className="text-sm font-bold">{eq.equipment.name}</p><p className="text-[10px] font-mono">{eq.equipment.code}</p></div>
+                      {checkedEndEq[eq.equipment.id] ? <CheckSquare className="text-emerald-600" /> : <Square className="text-slate-300" />}
+                    </button>
+                  ))}
+                </div>
+                <input className="w-full border rounded-xl p-3 mb-6" placeholder="Project closed by..." value={endedBy} onChange={e => setEndedBy(e.target.value)} />
+                <div className="flex gap-3">
+                  <button type="button" className="flex-1 bg-slate-100 py-3 rounded-xl" onClick={() => setEndModalOpen(false)}>Cancel</button>
+                  <button type="button" className="flex-1 bg-emerald-600 text-white py-3 rounded-xl" onClick={handleEndSubmit} disabled={!endedBy || isProcessing}>Complete</button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <AlertTriangle size={32} className="mx-auto text-red-500 mb-4" />
+                <h3 className="font-bold mb-2">Incomplete Return</h3>
+                <p className="text-sm text-slate-500 mb-8">Some equipment is missing. Proceed anyway?</p>
+                <div className="flex gap-3">
+                  <button type="button" className="flex-1 bg-slate-100 py-3 rounded-xl" onClick={() => setWarningOpen(false)}>Go Back</button>
+                  <button type="button" className="flex-1 bg-red-600 text-white py-3 rounded-xl" onClick={handleEndSubmit}>Force Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="app/projects/new/page.tsx">
+"use client"
+
+import { useState } from 'react';
+import { createProject, searchEquipment } from '@/lib/actions';
+import { Plus, X, Search, Users, Wrench } from 'lucide-react';
+
+export default function NewProject() {
+  const [name, setName] = useState('');
+  const [empName, setEmpName] = useState('');
+  const [employees, setEmployees] = useState<string[]>([]);
+  const [equipments, setEquipments] = useState<{ id: string, name: string, code: string }[]>([]);
+  
+  const[modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const[searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleEmployeeAdd = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) e.preventDefault();
+    if (empName.trim() && !employees.includes(empName.trim())) {
+      setEmployees([...employees, empName.trim()]);
+      setEmpName('');
+    }
+  };
+
+  const handleSearch = async (val: string) => {
+    setSearch(val);
+    if (val.length > 1) {
+      const res = await searchEquipment(val);
+      setSearchResults(res);
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const addEquipment = (eq: any) => {
+    if (!equipments.find(e => e.id === eq.id)) {
+      setEquipments([...equipments, eq]);
+    }
+    setModalOpen(false);
+    setSearch('');
+    setSearchResults([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    await createProject({ name, employees, equipmentIds: equipments.map(e => e.id) });
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto animate-in">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Initialize Project</h1>
+        <p className="text-slate-500 mt-1 text-sm">Create a new environmental deployment.</p>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Project Name</label>
+          <input required value={name} onChange={e => setName(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50" placeholder="e.g. Lagos Lagoon Phase 1" />
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Users size={16} className="text-emerald-600" />
+            <h2 className="text-sm font-semibold text-slate-800">Assign Personnel</h2>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <input 
+              value={empName} 
+              onChange={e => setEmpName(e.target.value)} 
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleEmployeeAdd(e);
+                }
+              }} 
+              className="flex-1 w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm" 
+              placeholder="Employee full name..." 
+            />
+            <button 
+              type="button" 
+              onClick={handleEmployeeAdd} 
+              className="bg-slate-800 text-white px-5 py-3 rounded-xl font-medium hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 text-sm sm:w-auto w-full active:opacity-80"
+            >
+              <Plus size={16}/> Add Staff
+            </button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {employees.map((emp, i) => (
+              <span key={i} className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-slate-200">
+                {emp} 
+                <button type="button" onClick={() => setEmployees(employees.filter((_, idx) => idx !== i))} className="hover:bg-slate-200 p-0.5 rounded-md transition-colors"><X size={12} className="text-slate-500" /></button>
+              </span>
+            ))}
+            {employees.length === 0 && <p className="text-xs text-slate-400 italic">No personnel added yet.</p>}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Wrench size={16} className="text-emerald-600" />
+            <h2 className="text-sm font-semibold text-slate-800">Assign Equipment</h2>
+          </div>
+          
+          <button type="button" onClick={() => setModalOpen(true)} className="w-full py-4 border border-dashed border-slate-300 rounded-xl text-slate-600 font-medium hover:bg-slate-50 hover:border-emerald-300 hover:text-emerald-600 transition-all flex justify-center items-center gap-2 text-sm bg-slate-50/50 active:opacity-80">
+            <Plus size={16}/> Browse Registry
+          </button>
+          
+          <div className="mt-4 space-y-2">
+            {equipments.map((eq, i) => (
+              <div key={i} className="flex justify-between items-center bg-white border border-slate-100 p-3 rounded-xl shadow-sm text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-slate-800">{eq.name || 'Component'}</span>
+                  <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{eq.code}</span>
+                </div>
+                <button type="button" onClick={() => setEquipments(equipments.filter((_, idx) => idx !== i))} className="p-1.5 hover:bg-red-50 rounded-md transition-colors group">
+                  <X size={14} className="text-slate-400 group-hover:text-red-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button type="submit" disabled={isSubmitting || !name} className="w-full bg-emerald-600 text-white py-4 rounded-xl font-semibold hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:opacity-80">
+          {isSubmitting ? 'Initializing...' : 'Launch Project'}
+        </button>
+      </form>
+
+      {modalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl animate-in">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Select Equipment</h3>
+              <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"><X size={18} className="text-slate-500" /></button>
+            </div>
+            <div className="relative mb-4">
+              <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+              <input value={search} onChange={e => handleSearch(e.target.value)} onKeyDown={(e) => { if(e.key === 'Enter') e.preventDefault() }} autoFocus className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all text-sm" placeholder="Search by name or code..." />
+            </div>
+            <div className="max-h-[40vh] overflow-y-auto space-y-1.5 pr-1">
+              {searchResults.map(res => (
+                /* Native Button Enforced for Search Results */
+                <button type="button" key={res.id} onClick={() => addEquipment(res)} className="w-full p-3 bg-white border border-slate-100 rounded-xl cursor-pointer hover:border-emerald-200 hover:bg-emerald-50 transition-all flex items-center justify-between group active:opacity-80 text-left">
+                  <span className="font-medium text-slate-700 group-hover:text-emerald-800 text-sm">{res.name}</span>
+                  <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-2 py-1 rounded group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors shrink-0 ml-2">{res.code}</span>
+                </button>
+              ))}
+              {search.length > 1 && searchResults.length === 0 && (
+                <div className="text-center py-6">
+                  <Wrench size={24} className="text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">No equipment found.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "spotlex-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.14.0",
+    "next": "16.2.4",
+    "papaparse": "^5.5.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "repomix": "^1.14.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "prisma": "^6.19.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="app/equipments/page.tsx">
+"use client"
+
+import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
+import { Plus, Upload, Image as ImageIcon, Wrench, Settings, SearchX, X, UploadCloud, FileText } from 'lucide-react';
+import { bulkUploadCSV } from '@/lib/actions';
+
+export default function EquipmentsPage() {
+  const [equipments, setEquipments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string | ArrayBuffer | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch('/api/equipments')
+      .then(r => r.json())
+      .then(data => {
+        setEquipments(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to load registry", err);
+        setLoading(false);
+      });
+  },[]);
+
+  // --- Modal & Upload Logic ---
+
+  const handleFileSelect = (file: File) => {
+    if (!file || !(file.type === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+      alert('Invalid file type. Please upload a CSV or XLSX file.');
+      return;
+    }
+    
+    // THE FIX: Use the FileReader API. It operates within the trusted event context,
+    // which preserves the browser's permission to read the file.
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (content) {
+        setFileContent(content);
+        setSelectedFile(file);
+      } else {
+        alert("An unexpected error occurred while reading the file.");
+        resetUploadState();
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("FileReader Error:", reader.error);
+      alert("Could not read the file. It may be corrupted or your browser is preventing access.");
+      resetUploadState();
+    };
+
+    // Trigger the appropriate read method based on file type
+    if (file.name.endsWith('.csv')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  };
+  
+  const handleDragEvents = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    handleDragEvents(e);
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const resetUploadState = () => {
+    setUploadModalOpen(false);
+    setSelectedFile(null);
+    setFileContent(null);
+    setIsUploading(false);
+    setIsDragging(false);
+  };
+
+  const handleProcessUpload = async () => {
+    if (!selectedFile || !fileContent) return;
+
+    setIsUploading(true);
+    try {
+      if (selectedFile.name.endsWith('.csv')) {
+        const Papa = await import('papaparse');
+        Papa.default.parse(fileContent as string, {
+          header: true,
+          complete: async (results) => {
+            await bulkUploadCSV(results.data);
+            window.location.reload();
+          }
+        });
+      } else {
+        const XLSX = await import('xlsx');
+        const workbook = XLSX.read(fileContent as ArrayBuffer);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+        await bulkUploadCSV(json);
+        window.location.reload();
+      }
+    } catch(err) {
+      console.error("Upload error", err);
+      alert("Failed to parse file content. Please ensure the file is correctly formatted.");
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto animate-in">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Equipment Registry</h1>
+        <p className="text-sm text-slate-500 mt-1">Manage tools, machinery, and subcomponents.</p>
+      </div>
+
+      <ul className="space-y-4">
+        <li className="flex flex-col sm:flex-row gap-3 h-auto sm:h-24">
+          <Link href="/equipments/new" className="flex-1 flex items-center bg-white border border-dashed border-slate-300 rounded-2xl hover:bg-emerald-50 hover:border-emerald-300 transition-all p-3 cursor-pointer group shadow-sm">
+            <div className="w-14 h-14 rounded-xl bg-slate-50 flex-shrink-0 flex items-center justify-center mr-4 group-hover:bg-white border border-slate-100 transition-colors">
+              <Plus size={24} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </div>
+            <span className="text-sm font-semibold text-slate-600 group-hover:text-emerald-700 transition-colors">Register New Item</span>
+          </Link>
+          
+          <button type="button" onClick={() => setUploadModalOpen(true)} className="w-full sm:w-40 h-16 sm:h-full bg-slate-800 hover:bg-slate-700 text-white rounded-2xl flex flex-row sm:flex-col items-center justify-center gap-2 cursor-pointer shadow-sm transition-colors">
+            <Upload size={20} className="sm:mb-1 text-slate-300" />
+            <span className="text-[10px] font-bold tracking-wider uppercase">Upload CSV/XLSX</span>
+          </button>
+        </li>
+
+        {loading && (
+          <li className="h-24 flex items-center justify-center bg-white rounded-2xl border border-slate-200 text-slate-400 font-medium text-sm animate-pulse shadow-sm">
+            Loading Manifest...
+          </li>
+        )}
+
+        {!loading && equipments.length === 0 && (
+          <li className="py-12 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <SearchX size={32} className="mx-auto text-slate-300 mb-3" />
+            <h3 className="text-lg font-bold text-slate-800 mb-1">Registry is Empty</h3>
+            <p className="text-slate-500 text-sm max-w-sm mx-auto">Register a new item or bulk upload your existing manifest.</p>
+          </li>
+        )}
+
+        {!loading && equipments.map(eq => (
+          <li key={eq.id}>
+            <Link href={`/equipments/${eq.id}`} className="flex items-center min-h-[5.5rem] bg-white border border-slate-200 shadow-sm hover:shadow-md rounded-2xl p-3 transition-all group">
+              <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0 mr-4 overflow-hidden flex items-center justify-center relative">
+                {eq.picture ? (
+                   <img src={eq.picture} alt={eq.name || eq.componentCode} className="w-full h-full object-cover" />
+                ) : (
+                   <ImageIcon size={24} className="text-slate-300" />
+                )}
+                <div className="absolute top-1 right-1 bg-white/90 p-0.5 rounded backdrop-blur-sm border border-slate-100">
+                  {eq.type === 'COMPONENT' ? <Settings size={10} className="text-slate-400" /> : <Wrench size={10} className="text-emerald-500" />}
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col justify-center overflow-hidden">
+                <h3 className="text-base font-bold text-slate-800 group-hover:text-emerald-700 transition-colors truncate">
+                  {eq.name || `Component`}
+                </h3>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-mono bg-slate-50 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
+                    {eq.code || eq.componentCode}
+                  </span>
+                  <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${eq.type === 'COMPONENT' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                    {eq.type || (eq.componentCode ? 'COMPONENT' : 'MAIN')}
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      {uploadModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-lg shadow-xl animate-in">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Bulk Upload Equipment</h3>
+              <button type="button" onClick={resetUploadState} className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"><X size={18} className="text-slate-500" /></button>
+            </div>
+            
+            {!selectedFile ? (
+              <div 
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                onDragOver={handleDragEvents}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-10 border-2 border-dashed rounded-2xl text-center cursor-pointer transition-colors ${isDragging ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`}
+              >
+                <input 
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleFileSelect(e.target.files[0])}
+                  accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                />
+                <UploadCloud size={32} className={`mx-auto transition-colors ${isDragging ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <p className={`mt-3 font-semibold text-sm transition-colors ${isDragging ? 'text-emerald-700' : 'text-slate-700'}`}>
+                  Drag & drop your file here
+                </p>
+                <p className={`mt-1 text-xs transition-colors ${isDragging ? 'text-emerald-500' : 'text-slate-500'}`}>
+                  or click to browse. Supports CSV, XLSX, XLS.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <FileText size={20} className="text-emerald-600 shrink-0" />
+                    <div className="flex flex-col overflow-hidden">
+                      <p className="font-semibold text-sm text-slate-800 truncate">{selectedFile.name}</p>
+                      <p className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => { setSelectedFile(null); setFileContent(null); }} className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-md transition-colors shrink-0">
+                    <X size={16} />
+                  </button>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={handleProcessUpload} 
+                  disabled={isUploading} 
+                  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm"
+                >
+                  {isUploading ? 'Processing File...' : 'Upload & Import'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 </file>
 

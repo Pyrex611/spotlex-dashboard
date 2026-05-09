@@ -1,16 +1,19 @@
-import prisma from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import ProjectClient from './ProjectClient';
 import { Info } from 'lucide-react';
 
 export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const project = await prisma.project.findUnique({
-    where: { id },
-    include: { 
-      employees: true, 
-      equipment: { include: { equipment: true } } 
-    }
-  });
+  
+  const { data: project } = await supabase
+    .from('projects')
+    .select(`
+      *,
+      employees(*),
+      assigned_equipment(*, equipment:equipments(*))
+    `)
+    .eq('id', id)
+    .single();
 
   if (!project) {
     return (
@@ -22,5 +25,21 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
     );
   }
 
-  return <ProjectClient project={project} />;
+  // Map snake_case to frontend camelCase
+  const formattedProject = {
+    ...project,
+    startDate: project.start_date,
+    endDate: project.end_date,
+    endedBy: project.ended_by,
+    employees: project.employees,
+    equipment: project.assigned_equipment.map((ae: any) => ({
+      ...ae,
+      equipment: ae.equipment,
+      assignDate: ae.assign_date,
+      recalledBy: ae.recalled_by,
+      recallDate: ae.recall_date
+    }))
+  };
+
+  return <ProjectClient project={formattedProject} />;
 }

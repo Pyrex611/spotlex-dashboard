@@ -1,60 +1,45 @@
-import prisma from '@/lib/db';
 import Link from 'next/link';
-import { Plus, Users, Wrench } from 'lucide-react';
-import { format } from 'date-fns';
+import { ArrowRight, Shield, Zap, Globe } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
-export default async function ProjectsPage() {
-  const projects = await prisma.project.findMany({
-    where: { status: 'ONGOING' },
-    include: { _count: { select: { equipment: true, employees: true } } },
-    orderBy: { startDate: 'desc' }
-  });
-
+export default function LandingPage() {
   return (
-    <div className="animate-in">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Active Deployments</h1>
-        <p className="text-slate-500 mt-1 text-sm">Manage your ongoing environmental projects.</p>
+    <div className="animate-in flex flex-col items-center justify-center min-h-[70vh] text-center px-4">
+      <div className="mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold tracking-widest uppercase">
+        Enterprise Solutions
+      </div>
+      <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
+        Spotlex World <br /> 
+        <span className="text-emerald-600 border-b-4 border-emerald-100">Environmental Systems</span>
+      </h1>
+      <p className="max-w-2xl text-slate-500 text-lg md:text-xl mb-10 leading-relaxed">
+        High-end deployment management for complex environmental projects. Reliable, secure, and optimized for professional teams.
+      </p>
+      
+      <div className="flex flex-col sm:flex-row gap-4 mb-20">
+        <Link href="/login" className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+          Get Started <ArrowRight size={20} />
+        </Link>
+        <button className="bg-white text-slate-600 border border-slate-200 px-8 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+          View Solutions
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Link href="/projects/new" className="group h-full min-h-[200px]">
-          <div className="h-full w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-500 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 transition-all cursor-pointer">
-            <div className="h-12 w-12 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm group-hover:border-emerald-200">
-              <Plus size={20} className="text-current" />
-            </div>
-            <span className="mt-3 font-medium text-sm">Initialize New Project</span>
-          </div>
-        </Link>
-
-        {projects.map((proj) => (
-          <Link key={proj.id} href={`/projects/${proj.id}`}>
-            <div className="h-full min-h-[200px] rounded-2xl bg-white border border-slate-200 p-6 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:border-slate-300 transition-all flex flex-col cursor-pointer relative overflow-hidden group">
-              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
-              <h2 className="text-lg font-semibold text-slate-800 mb-1 truncate pr-2">{proj.name}</h2>
-              <p className="text-xs font-medium text-slate-500 mb-6">Started {format(proj.startDate, 'MMM dd, yyyy')}</p>
-              
-              <div className="space-y-2 mt-auto">
-                <div className="flex items-center justify-between bg-slate-50 px-3 py-2.5 rounded-lg">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Wrench size={14} className="text-slate-400" />
-                    <span className="text-xs font-medium">Equipments</span>
-                  </div>
-                  <span className="font-semibold text-slate-700 bg-white px-2 py-0.5 rounded text-xs border border-slate-200">{proj._count.equipment}</span>
-                </div>
-                <div className="flex items-center justify-between bg-slate-50 px-3 py-2.5 rounded-lg">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Users size={14} className="text-slate-400" />
-                    <span className="text-xs font-medium">Employees</span>
-                  </div>
-                  <span className="font-semibold text-slate-700 bg-white px-2 py-0.5 rounded text-xs border border-slate-200">{proj._count.employees}</span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl">
+        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm text-left">
+          <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center mb-4"><Shield className="text-emerald-600" size={20}/></div>
+          <h3 className="font-bold text-slate-800 mb-2">Secure Cloud</h3>
+          <p className="text-sm text-slate-500">Enterprise-grade security powered by Supabase architecture.</p>
+        </div>
+        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm text-left">
+          <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center mb-4"><Zap className="text-emerald-600" size={20}/></div>
+          <h3 className="font-bold text-slate-800 mb-2">Real-time Data</h3>
+          <p className="text-sm text-slate-500">Instant updates across all devices for equipment and staff tracking.</p>
+        </div>
+        <div className="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm text-left">
+          <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center mb-4"><Globe className="text-emerald-600" size={20}/></div>
+          <h3 className="font-bold text-slate-800 mb-2">Global Access</h3>
+          <p className="text-sm text-slate-500">Optimized mobile interface for managing deployments in the field.</p>
+        </div>
       </div>
     </div>
   );
