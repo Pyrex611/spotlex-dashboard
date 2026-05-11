@@ -3,14 +3,13 @@
 import { useState, useEffect, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, Lock } from 'lucide-react'
+import { Loader2, UserPlus } from 'lucide-react'
 
-function LoginForm() {
+function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ text: string, type: 'error' | 'info' | 'success' } | null>(null)
-  const [knownUser, setKnownUser] = useState(false)
+  const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null)
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -18,43 +17,46 @@ function LoginForm() {
 
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    const errorParam = searchParams.get('error')
-    
     if (emailParam) setEmail(emailParam)
-    
-    if (errorParam === 'wrong_password') {
-      setKnownUser(true)
-      setMessage({ text: 'Please enter the correct password for your account.', type: 'error' })
-    }
-  },[searchParams])
+  }, [searchParams])
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
     })
 
-    if (error) {
-      if (error.message.toLowerCase().includes('invalid login credentials')) {
-         if (knownUser) {
-            setMessage({ text: 'Incorrect password. Please try again.', type: 'error' })
-            setLoading(false)
-         } else {
-            setMessage({ text: 'Account not found or invalid credentials. Redirecting to Sign Up...', type: 'info' })
-            setTimeout(() => {
-              router.push(`/signup?email=${encodeURIComponent(email)}`)
-            }, 2000)
-         }
+    if (signUpError) {
+      if (signUpError.message.toLowerCase().includes('already registered')) {
+        setMessage({ text: 'Account already exists, signing in...', type: 'info' })
+        
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        })
+
+        if (signInError) {
+          setMessage({ text: 'Account already exists with this email. Redirecting to sign in...', type: 'error' })
+          setTimeout(() => {
+            router.push(`/login?email=${encodeURIComponent(email)}&error=wrong_password`)
+          }, 2000)
+        } else {
+          setMessage({ text: 'Signed in successfully! Redirecting...', type: 'success' })
+          setTimeout(() => {
+            router.push('/dashboard')
+            router.refresh()
+          }, 1000)
+        }
       } else {
-        setMessage({ text: error.message, type: 'error' })
+        setMessage({ text: signUpError.message, type: 'error' })
         setLoading(false)
       }
     } else {
-      setMessage({ text: 'Authentication successful! Redirecting...', type: 'success' })
+      setMessage({ text: 'Account created successfully! Redirecting...', type: 'success' })
       setTimeout(() => {
         router.push('/dashboard')
         router.refresh()
@@ -67,25 +69,25 @@ function LoginForm() {
       <div className="max-w-md w-full animate-in">
         <div className="text-center mb-8">
           <img src="/spotlex_logo.jpg" alt="Logo" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-sm object-cover" />
-          <h1 className="text-2xl font-bold text-slate-900">Welcome Back</h1>
-          <p className="text-slate-500 text-sm mt-2">Sign in to Spotlex World</p>
+          <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
+          <p className="text-slate-500 text-sm mt-2">Join Spotlex World Management System</p>
         </div>
 
         <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl">
-          <form onSubmit={handleLogin} className="space-y-5 relative z-10">
+          <form onSubmit={handleSignup} className="space-y-5 relative z-10">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label>
               <input 
                 type="email" required 
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
-                placeholder="admin@spotlex.com"
+                placeholder="staff@spotlex.com"
                 value={email} onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Create Password</label>
               <input 
-                type="password" required 
+                type="password" required minLength={6}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
                 placeholder="••••••••"
                 value={password} onChange={(e) => setPassword(e.target.value)}
@@ -102,22 +104,22 @@ function LoginForm() {
               </div>
             )}
 
-            <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:opacity-80">
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Lock size={18} />}
-              {loading ? 'Authenticating...' : 'Sign In'}
+            <button type="submit" disabled={loading} className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:opacity-80">
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <UserPlus size={18} />}
+              {loading ? 'Processing...' : 'Create Account'}
             </button>
           </form>
 
           <div className="mt-6 text-center relative z-20">
             <p className="text-sm text-slate-500">
-              Don&apos;t have an account?{' '}
+              Already have an account?{' '}
               {/* THE FIX: Replaced <Link> with native button routing */}
               <button 
                 type="button" 
-                onClick={() => router.push('/signup')} 
+                onClick={() => router.push('/login')} 
                 className="text-emerald-600 font-bold hover:underline cursor-pointer focus:outline-none"
               >
-                Sign up
+                Sign in
               </button>
             </p>
           </div>
@@ -127,10 +129,10 @@ function LoginForm() {
   )
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-emerald-600" size={32} /></div>}>
-      <LoginForm />
+      <SignupForm />
     </Suspense>
   )
 }

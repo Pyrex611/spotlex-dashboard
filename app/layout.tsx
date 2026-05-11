@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const[sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -29,7 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   const isActive = (path: string) => pathname === path || (path !== '/' && pathname.startsWith(path));
-  const isPublicPage = pathname === '/' || pathname === '/login';
+  
+  // Added /signup to the public pages array
+  const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/signup';
 
   return (
     <html lang="en">
