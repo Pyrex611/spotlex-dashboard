@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Loader2, Lock } from 'lucide-react'
 
@@ -27,7 +27,7 @@ export default function LoginPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/')
+      router.push('/dashboard')
       router.refresh()
     }
   }

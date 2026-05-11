@@ -7,7 +7,7 @@ import { ImageIcon, Save, Loader2 } from 'lucide-react';
 export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
   const [eq, setEq] = useState(initialEq);
   const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const[saving, setSaving] = useState(false);
   const [newPicture, setNewPicture] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialEq.picture);
 
@@ -46,7 +46,8 @@ export default function EquipmentClient({ eq: initialEq }: { eq: any }) {
     <div className="max-w-2xl mx-auto animate-in space-y-6">
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
         <div className="w-24 h-24 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden mb-5 flex justify-center items-center relative group">
-          {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300" />}
+          {/* FIX: Added alt="Equipment preview" */}
+          {previewUrl ? <img src={previewUrl} alt="Equipment preview" className="w-full h-full object-cover" /> : <ImageIcon size={32} className="text-slate-300" />}
           {editMode && (
              <label className="absolute inset-0 bg-slate-900/50 flex items-center justify-center cursor-pointer opacity-100 transition-opacity backdrop-blur-[2px]">
                <span className="text-white text-[10px] font-semibold bg-slate-800 px-3 py-1.5 rounded-md shadow-sm text-center">Change</span>
