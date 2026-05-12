@@ -14,12 +14,21 @@ export default function NewEquipment() {
   const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
   
-  const router = useRouter(); // Native client-side router
+  const router = useRouter();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageError(null);
     const file = e.target.files?.[0];
+    
     if (file) {
+      // 3MB Size Limit Check
+      if (file.size > 3 * 1024 * 1024) {
+        setImageError("File Size Exceeds Maximum Allowed (3MB)");
+        e.target.value = '';
+        return;
+      }
       setPictureFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
@@ -38,11 +47,10 @@ export default function NewEquipment() {
       formData.append('equipmentCode', equipCode);
       if (pictureFile) formData.append('picture', pictureFile);
 
-      // THE FIX: Await the response instead of relying on an internal throw
       const response = await createEquipment(formData);
       
       if (response.success) {
-        router.push('/equipments'); // Cleanly redirect via the browser
+        router.push('/equipments');
       } else {
         alert(response.error || "Failed to create equipment.");
         setIsSubmitting(false);
@@ -108,7 +116,13 @@ export default function NewEquipment() {
                 Choose New Image
                 <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </label>
-              <p className="text-[10px] text-slate-400 mt-2">Maximum file size 2MB.</p>
+              
+              {/* Dynamic Error Rendering */}
+              {imageError ? (
+                <p className="text-[11px] font-bold text-red-500 mt-2 animate-in">{imageError}</p>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-2">Maximum file size 3MB.</p>
+              )}
             </div>
           </div>
         </div>
