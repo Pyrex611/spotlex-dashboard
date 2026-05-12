@@ -6,6 +6,7 @@ import { Menu, Home, Wrench, History, X, LogOut, LayoutDashboard } from 'lucide-
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { Analytics } from '@vercel/analytics/next';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const[sidebarOpen, setSidebarOpen] = useState(false);
@@ -92,6 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/history" className={`flex flex-col items-center gap-1 ${isActive('/history') ? 'text-emerald-600' : 'text-slate-500'}`}><History size={20} /><span className="text-[10px] font-bold">Archive</span></Link>
           </div>
         )}
+        <Analytics />
       </body>
     </html>
   );
