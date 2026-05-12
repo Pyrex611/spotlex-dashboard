@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createEquipment } from '@/lib/actions';
 import { ImageIcon, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function NewEquipment() {
   const [type, setType] = useState('MAIN');
@@ -13,6 +14,8 @@ export default function NewEquipment() {
   const [pictureFile, setPictureFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const router = useRouter(); // Native client-side router
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,8 +25,10 @@ export default function NewEquipment() {
     }
   };
 
-  const clientAction = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
+    
     try {
       const formData = new FormData();
       formData.append('type', type);
@@ -33,10 +38,18 @@ export default function NewEquipment() {
       formData.append('equipmentCode', equipCode);
       if (pictureFile) formData.append('picture', pictureFile);
 
-      await createEquipment(formData);
+      // THE FIX: Await the response instead of relying on an internal throw
+      const response = await createEquipment(formData);
+      
+      if (response.success) {
+        router.push('/equipments'); // Cleanly redirect via the browser
+      } else {
+        alert(response.error || "Failed to create equipment.");
+        setIsSubmitting(false);
+      }
     } catch (error) {
+      console.error("Upload Exception:", error);
       alert("Registration failed. Check network or storage permissions.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -48,7 +61,7 @@ export default function NewEquipment() {
         <p className="text-sm text-slate-500 mt-1">Add a new item to the cloud database.</p>
       </div>
       
-      <form action={clientAction} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-medium text-slate-700 mb-2">Classification</label>
           <select value={type} onChange={e => setType(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-slate-800 bg-slate-50/50 text-sm">
@@ -78,6 +91,7 @@ export default function NewEquipment() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-2">Linked Parent Code</label>
                 <input required value={equipCode} onChange={e => setEquipCode(e.target.value)} className="w-full border border-slate-200 rounded-xl px-4 py-3 font-mono text-sm focus:border-emerald-500 outline-none" placeholder="e.g. EX-2049" />
+                <p className="text-[11px] text-slate-500 mt-2">Links this component to an existing Main Equipment.</p>
               </div>
             </>
           )}
